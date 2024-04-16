@@ -13,14 +13,16 @@ import time
 import itertools
 
 from backbone import EmbedNetwork
-from loss import TripletLoss
-from triplet_selector import BatchHardTripletSelector
+from triplet_selector import BatchHardTripletSelector, PairSelector
 from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
 from optimizer import AdamOptimWrapper
 from logger import logger
 
 
+#from model import ReID
+from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
+from modules import ResNet_VAE
 
 def train():
     ## setup
@@ -29,13 +31,28 @@ def train():
 
     ## model and loss
     logger.info('setting up backbone model and loss')
-    net = EmbedNetwork().cuda()
-    net = nn.DataParallel(net)
-    triplet_loss = TripletLoss(margin = None).cuda() # no margin means soft-margin
+    #model = ReID()
+    model = ResNet_VAE().cuda()
+    
+    # net = EmbedNetwork().cuda()
+    # net = nn.DataParallel(net)
+    triplet_loss = TripletLoss(margin = 0.2).cuda() # no margin means soft-margin
+    kl_divergence = KLDivergence().cuda()
+    reconstruction_loss =ReconstructionLoss().cuda()
+    bce_loss = BinaryCrossEntropy().cuda()
+    lr = 3e-4
+    
+    loss_weigts = {
+        "triplet": 0.3,
+        "kl": 0.3,
+        "reconstruction": 0.3,
+        "bce": 0.3,
+    }
 
     ## optimizer
     logger.info('creating optimizer')
-    optim = AdamOptimWrapper(net.parameters(), lr = 3e-4, wd = 0, t0 = 15000, t1 = 25000)
+    # optim = AdamOptimWrapper(net.parameters(), lr = 3e-4, wd = 0, t0 = 15000, t1 = 25000)
+    optim = torch.optim.AdamW(model.parameters(), lr = lr)
 
     ## dataloader
     selector = BatchHardTripletSelector()
@@ -49,6 +66,7 @@ def train():
     loss_avg = []
     count = 0
     t_start = time.time()
+    model.train()
     while True:
         try:
             imgs, lbs, _ = next(diter)
@@ -56,13 +74,24 @@ def train():
             diter = iter(dl)
             imgs, lbs, _ = next(diter)
 
-        net.train()
+        # model.train()
         imgs = imgs.cuda()
         lbs = lbs.cuda()
-        embds = net(imgs)
-        anchor, positives, negatives = selector(embds, lbs)
+        #x_reconst, z, mu, logvar, cls = model(imgs)
+        x_reconst, z, mu, logvar= model(imgs)
+        
+        anchor, positives, negatives = selector(z, lbs)
 
-        loss = triplet_loss(anchor, positives, negatives)
+        loss1 = triplet_loss(anchor, positives, negatives)
+        loss2 = kl_divergence(mu, logvar)
+        loss3 = reconstruction_loss(x_reconst, imgs)
+        #loss4 = bce_loss(cls, lbs)
+        
+        loss = loss_weigts['triplet'] * loss1 + \
+                loss_weigts['kl'] * loss2 + \
+                loss_weigts['reconstruction'] * loss3 #+ \
+                #loss_weigts['bce'] * loss4
+
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -72,7 +101,8 @@ def train():
             loss_avg = sum(loss_avg) / len(loss_avg)
             t_end = time.time()
             time_interval = t_end - t_start
-            logger.info('iter: {}, loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, optim.lr, time_interval))
+            #logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, loss4, optim.lr, time_interval))
+            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, lr, time_interval))
             loss_avg = []
             t_start = t_end
 
@@ -81,7 +111,7 @@ def train():
 
     ## dump model
     logger.info('saving trained model')
-    torch.save(net.module.state_dict(), './res/model.pkl')
+    torch.save(model.module.state_dict(), './res/model.pkl')
 
     logger.info('everything finished')
 

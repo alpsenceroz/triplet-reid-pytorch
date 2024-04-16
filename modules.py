@@ -57,7 +57,7 @@ class ResNet_VAE(nn.Module):
     def __init__(self, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256):
         super(ResNet_VAE, self).__init__()
 
-        self.encoder = Encoder(fc_hidden1, fc_hidden2, drop_p, CNN_embed_dim)
+        self.encoder = Encoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
         self.decoder = Decoder(fc_hidden2, CNN_embed_dim)
         
 

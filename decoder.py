@@ -1,3 +1,6 @@
+from torch import nn
+from torch.nn import functional as F
+
 class Decoder(nn.Module):
     def __init__(self, fc_hidden2=768, CNN_embed_dim=256):
         super(Decoder, self).__init__()
@@ -43,5 +46,5 @@ class Decoder(nn.Module):
         x = self.convTrans6(x)
         x = self.convTrans7(x)
         x = self.convTrans8(x)
-        x = F.interpolate(x, size=(224, 224), mode='bilinear')
+        x = F.interpolate(x, size=(256, 128), mode='bilinear')
         return x

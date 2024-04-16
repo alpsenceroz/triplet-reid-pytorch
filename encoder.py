@@ -1,3 +1,6 @@
+from torch import nn
+from torch.nn import functional as F
+from torchvision import models
 class Encoder(nn.Module):
     def __init__(self, fc_hidden1=1024, fc_hidden2=768, CNN_embed_dim=256, drop_p=None):
         super(Encoder, self).__init__()
