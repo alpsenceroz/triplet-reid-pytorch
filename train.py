@@ -11,6 +11,7 @@ import os
 import logging
 import time
 import itertools
+import argparse
 
 from backbone import EmbedNetwork
 from triplet_selector import BatchHardTripletSelector, PairSelector
@@ -24,7 +25,7 @@ from logger import logger
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
 from modules import ResNet_VAE
 
-def train():
+def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## setup
     torch.multiprocessing.set_sharing_strategy('file_system')
     if not os.path.exists('./res'): os.makedirs('./res')
@@ -40,14 +41,7 @@ def train():
     kl_divergence = KLDivergence().cuda()
     reconstruction_loss =ReconstructionLoss().cuda()
     bce_loss = BinaryCrossEntropy().cuda()
-    lr = 3e-4
-    
-    loss_weigts = {
-        "triplet": 0.3,
-        "kl": 0.3,
-        "reconstruction": 0.3,
-        "bce": 0.3,
-    }
+
 
     ## optimizer
     logger.info('creating optimizer')
@@ -87,10 +81,10 @@ def train():
         loss3 = reconstruction_loss(x_reconst, imgs)
         #loss4 = bce_loss(cls, lbs)
         
-        loss = loss_weigts['triplet'] * loss1 + \
-                loss_weigts['kl'] * loss2 + \
-                loss_weigts['reconstruction'] * loss3 #+ \
-                #loss_weigts['bce'] * loss4
+        loss = triplet * loss1 + \
+                kl * loss2 + \
+                reconstruction * loss3 #+ \
+                # bce * loss4
 
         optim.zero_grad()
         loss.backward()
@@ -117,4 +111,10 @@ def train():
 
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
+    parser.add_argument('--triplet', type=float, default=0.3, help='triplet loss')
+    parser.add_argument('--kl', type=float, default=0.3, help='kl divergence')
+    parser.add_argument('--reconstruction', type=float, default=0.3, help='reconstruction loss')
+    args = parser.parse_args()
+    train(args.lr, args.triplet, args.kl, args.reconstruction)
