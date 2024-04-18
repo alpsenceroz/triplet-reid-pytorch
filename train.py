@@ -24,6 +24,7 @@ from logger import logger
 #from model import ReID
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
 from modules import ResNet_VAE
+from classifier import Classifier
 
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## setup
@@ -34,6 +35,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     logger.info('setting up backbone model and loss')
     #model = ReID()
     model = ResNet_VAE().cuda()
+    classifier = Classifier(input_size=512).cuda()
     
     # net = EmbedNetwork().cuda()
     # net = nn.DataParallel(net)
@@ -46,10 +48,11 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## optimizer
     logger.info('creating optimizer')
     # optim = AdamOptimWrapper(net.parameters(), lr = 3e-4, wd = 0, t0 = 15000, t1 = 25000)
-    optim = torch.optim.AdamW(model.parameters(), lr = lr)
+    optim = torch.optim.AdamW(list(model.parameters()) + list(classifier.parameters()), lr = lr)
 
     ## dataloader
-    selector = BatchHardTripletSelector()
+    triplet_selector = BatchHardTripletSelector()
+    pair_selector = PairSelector()
     ds = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train = True)
     sampler = BatchSampler(ds, 18, 4)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
@@ -61,6 +64,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     count = 0
     t_start = time.time()
     model.train()
+    classifier.train()
     while True:
         try:
             imgs, lbs, _ = next(diter)
@@ -74,17 +78,19 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
         #x_reconst, z, mu, logvar, cls = model(imgs)
         x_reconst, z, mu, logvar= model(imgs)
         
-        anchor, positives, negatives = selector(z, lbs)
+        anchor, positives, negatives = triplet_selector(z, lbs)
+        pairs, pair_labels = pair_selector(z, lbs, 18, 4)
+        preds = classifier(pairs)
 
         loss1 = triplet_loss(anchor, positives, negatives)
         loss2 = kl_divergence(mu, logvar)
         loss3 = reconstruction_loss(x_reconst, imgs)
-        #loss4 = bce_loss(cls, lbs)
+        loss4 = bce_loss(preds, pair_labels)
         
         loss = triplet * loss1 + \
                 kl * loss2 + \
-                reconstruction * loss3 #+ \
-                # bce * loss4
+                reconstruction * loss3 + \
+                bce * loss4
 
         optim.zero_grad()
         loss.backward()
@@ -95,8 +101,8 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
             loss_avg = sum(loss_avg) / len(loss_avg)
             t_end = time.time()
             time_interval = t_end - t_start
-            #logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, loss4, optim.lr, time_interval))
-            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, lr, time_interval))
+            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, loss4, lr, time_interval))
+            #logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, lr, time_interval))
             loss_avg = []
             t_start = t_end
 
@@ -116,5 +122,6 @@ if __name__ == '__main__':
     parser.add_argument('--triplet', type=float, default=0.3, help='triplet loss')
     parser.add_argument('--kl', type=float, default=0.3, help='kl divergence')
     parser.add_argument('--reconstruction', type=float, default=0.3, help='reconstruction loss')
+    parser.add_argument('--bce', type=float, default=0.3, help='bce loss')
     args = parser.parse_args()
-    train(args.lr, args.triplet, args.kl, args.reconstruction)
+    train(args.lr, args.triplet, args.kl, args.reconstruction, args.bce)
