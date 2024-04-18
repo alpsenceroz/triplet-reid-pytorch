@@ -29,7 +29,8 @@ class Market1501(Dataset):
         self.imgs = [os.path.join(data_path, el) for el in self.imgs]
         if is_train:
             self.trans = transforms.Compose([
-                transforms.Resize((288, 144)),
+                transforms.Resize((256, 128)),
+                #transforms.Resize((288, 144)),
                 #transforms.RandomCrop((256, 128)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
