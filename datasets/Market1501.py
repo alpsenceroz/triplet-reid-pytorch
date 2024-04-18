@@ -30,11 +30,11 @@ class Market1501(Dataset):
         if is_train:
             self.trans = transforms.Compose([
                 transforms.Resize((288, 144)),
-                transforms.RandomCrop((256, 128)),
+                #transforms.RandomCrop((256, 128)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
-                RandomErasing(0.5, mean=[0.0, 0.0, 0.0])
+                #RandomErasing(0.5, mean=[0.0, 0.0, 0.0])
             ])
         else:
             self.trans_tuple = transforms.Compose([
