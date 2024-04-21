@@ -107,11 +107,13 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
             t_start = t_end
 
         count += 1
+        if count % 500 == 0:
+            ## dump model
+            logger.info('saving trained model')
+            path = './res/model' + '_' + str(count) + '.pkl'
+            torch.save(model.state_dict(), path)
         if count == 25000: break
 
-    ## dump model
-    logger.info('saving trained model')
-    torch.save(model.module.state_dict(), './res/model.pkl')
 
     logger.info('everything finished')
 
