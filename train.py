@@ -111,7 +111,9 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
             ## dump model
             logger.info('saving trained model')
             path = './res/model' + '_' + str(count) + '.pkl'
+            path_cls = './res/classifier' + '_' + str(count) + '.pkl'
             torch.save(model.state_dict(), path)
+            torch.save(classifier.state_dict(), path_cls)
         if count == 25000: break
 
 

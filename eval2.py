@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torchvision
 from torch.utils.data import DataLoader
-from model import ReID
 
 from sklearn.metrics import confusion_matrix
 import numpy as np
