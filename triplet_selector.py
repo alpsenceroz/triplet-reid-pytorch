@@ -52,7 +52,7 @@ class PairSelector(object):
         for ind, embed in enumerate(embeds):
             ind_true = np.where(lb_eqs[ind])[0]
             ind_false = np.where(lb_eqs[ind] == False)[0]
-            ind_false = np.random.choice(ind_false, size=pair_number)
+            ind_false = np.random.choice(ind_false, size=n_num)
             for i in range(len(ind_true)):
                 pair = torch.cat((embed, embeds[ind_true[i]]))
                 pairs.append(pair)  # Concatenate embeddings and add them to pairs array
