@@ -7,8 +7,6 @@ import logging
 import sys
 from logger import logger
 
-
-
 class AdamOptimWrapper(object):
     '''
     A wrapper of Adam optimizer which allows to adjust the optimizing parameters

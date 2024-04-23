@@ -33,7 +33,6 @@ def pdist_np(emb1, emb2):
     return dist_mtx
 
 
-
 if __name__ == "__main__":
     a = np.arange(4*128).reshape(4, 128)
     b = np.arange(10, 10 + 5*128).reshape(5, 128)

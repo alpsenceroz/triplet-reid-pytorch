@@ -1,0 +1,39 @@
+Brotli @ file:///home/conda/feedstock_root/build_artifacts/brotli-split_1695989787169/work
+certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1707022139797/work/certifi
+charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1698833585322/work
+contourpy==1.2.1
+cycler==0.12.1
+filelock @ file:///home/conda/feedstock_root/build_artifacts/filelock_1712686151958/work
+fonttools==4.51.0
+fsspec==2024.3.1
+idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1713279365350/work
+Jinja2 @ file:///home/conda/feedstock_root/build_artifacts/jinja2_1704966972576/work
+joblib==1.4.0
+kiwisolver==1.4.5
+MarkupSafe @ file:///home/conda/feedstock_root/build_artifacts/markupsafe_1706899920239/work
+matplotlib==3.8.4
+mpmath @ file:///home/conda/feedstock_root/build_artifacts/mpmath_1678228039184/work
+networkx @ file:///home/conda/feedstock_root/build_artifacts/networkx_1712540363324/work
+numpy @ file:///home/conda/feedstock_root/build_artifacts/numpy_1707225359967/work/dist/numpy-1.26.4-cp312-cp312-linux_x86_64.whl#sha256=031b7d6b2e5e604d9e21fc21be713ebf28ce133ec872dce6de006742d5e49bab
+opencv-python==4.9.0.80
+packaging==24.0
+pillow @ file:///croot/pillow_1707233021655/work
+pyparsing==3.1.2
+PySocks @ file:///home/conda/feedstock_root/build_artifacts/pysocks_1661604839144/work
+python-dateutil==2.9.0.post0
+pytorch-metric-learning==2.5.0
+PyYAML @ file:///home/conda/feedstock_root/build_artifacts/pyyaml_1695373450623/work
+requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1684774241324/work
+scikit-learn==1.4.2
+scipy==1.13.0
+setuptools==69.5.1
+six==1.16.0
+sympy @ file:///home/conda/feedstock_root/build_artifacts/sympy_1684180539862/work
+threadpoolctl==3.4.0
+torch==2.2.2
+torchaudio==2.2.2
+torchvision==0.17.2
+tqdm==4.66.2
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1712329955671/work
+urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1708239446578/work
+wheel==0.43.0

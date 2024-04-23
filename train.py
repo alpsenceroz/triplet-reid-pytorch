@@ -33,21 +33,17 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
 
     ## model and loss
     logger.info('setting up backbone model and loss')
-    #model = ReID()
+
     model = ResNet_VAE().cuda()
     classifier = Classifier(input_size=512).cuda()
     
-    # net = EmbedNetwork().cuda()
-    # net = nn.DataParallel(net)
     triplet_loss = TripletLoss(margin = 0.2).cuda() # no margin means soft-margin
     kl_divergence = KLDivergence().cuda()
     reconstruction_loss =ReconstructionLoss().cuda()
     bce_loss = BinaryCrossEntropy().cuda()
 
-
     ## optimizer
     logger.info('creating optimizer')
-    # optim = AdamOptimWrapper(net.parameters(), lr = 3e-4, wd = 0, t0 = 15000, t1 = 25000)
     optim = torch.optim.AdamW(list(model.parameters()) + list(classifier.parameters()), lr = lr)
 
     ## dataloader
@@ -72,10 +68,9 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
             diter = iter(dl)
             imgs, lbs, _ = next(diter)
 
-        # model.train()
         imgs = imgs.cuda()
         lbs = lbs.cuda()
-        #x_reconst, z, mu, logvar, cls = model(imgs)
+
         x_reconst, z, mu, logvar= model(imgs)
         
         anchor, positives, negatives = triplet_selector(z, lbs)

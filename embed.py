@@ -39,7 +39,6 @@ def parse_args():
     return parse.parse_args()
 
 
-
 def embed(args):
     ## logging
     FORMAT = '%(levelname)s %(filename)s:%(lineno)d: %(message)s'

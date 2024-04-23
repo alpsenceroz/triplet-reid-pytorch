@@ -1,17 +1,11 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 
-
-import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import Sampler
-import cv2
+
 import numpy as np
 import random
-import logging
-import sys
-
-
 
 class BatchSampler(Sampler):
     '''

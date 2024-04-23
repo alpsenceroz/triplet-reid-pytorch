@@ -13,7 +13,6 @@ from PIL import Image
 
 from random_erasing import RandomErasing
 
-
 class Market1501(Dataset):
     '''
     a wrapper of Market1501 dataset

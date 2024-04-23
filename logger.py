@@ -1,11 +1,9 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 
-
 import os
 import logging
 import time
-
 
 def get_logger():
     if not os.path.exists('./res'): os.makedirs('./res')
