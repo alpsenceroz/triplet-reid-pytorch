@@ -46,7 +46,6 @@ class PairSelector(object):
         lb_eqs = labels == labels.T # lb_eqs: 2D ndarray of shape (n, n); n = # of embeddings
 
         pair_number = int(n_num * (n_num - 1) / 2)
-        print('pair_number:', pair_number)
         pairs = []
         pair_labels = [] # pair_labels[i] = 1 if pairs[i] are of the same id, 0 otherwise
         pair_indices = []  # New list to store (i ,j); given pairs[k] = embeds[i] + embeds[j]
