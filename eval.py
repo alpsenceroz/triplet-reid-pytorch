@@ -71,14 +71,11 @@ def visualize_results(preds, pair_labels, indices, imgs):
 
 
 def cmc(label, labels, topk):
-    k = topk
-
-    correct = 0
-    for lb in labels:
-        if lb == label:
-            correct += 1
-    return correct / k
-
+    for i in range(topk):
+        if labels[i] == label:
+            return 1
+            
+    return 0
 
 def calculate_g_prime(vector, vectors, labels):
     distances = torch.sqrt(torch.sum((vectors - vector)**2, dim=1)) # euclidian distance
@@ -90,6 +87,7 @@ def calculate_g_prime(vector, vectors, labels):
     sorted_labels = labels[sorted_indices]
     
     return sorted_vectors, sorted_labels
+
 
 def average_precision_at_k(label, labels, k):
     num_relevant = 0
@@ -107,7 +105,7 @@ def map_at_k(lbs, labels_sorted, k):
     total_ap = 0.0
     for label, labels in zip(lbs, labels_sorted):
         total_ap += average_precision_at_k(label, labels, k)
-    return total_ap / len(labels_sorted)
+    return total_ap / len(lbs)
 
 
 def eval(args):
@@ -170,12 +168,39 @@ def eval(args):
         print(f"Mean CMC@{k}: {mean_cmc}")
                 
         # calculate mAP@4
-        #map4 = average_precision_at_k(lbs, labels_list, k)
-        #print(f"mAP@{k}: {map4}")
+        map4 = map_at_k(lbs, labels_list, k) 
+        print(f"mAP@4:{map4}")
         
         # calculate confusion matrix
         cm = confusion_matrix(pair_labels.cpu().numpy(), preds > 0.5)
         print(cm)
+
+        TN, FP = cm[0]
+        FN, TP = cm[1]
+        
+        print(f"TP: {TP}, FP: {FP}, FN: {FN}, TN: {TN}")
+        
+        # Calculate and print accuracy
+        accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0.
+        print(f"Accuracy: {accuracy}")
+
+        # Calculate and print precision
+        precision = TP / (TP + FP) if (TP + FP)  != 0 else 0.
+        print(f"Precision: {precision}")
+
+        # Calculate and print recall
+        recall = TP / (TP + FN) if (TP + FN) != 0 else 0.
+        print(f"Recall: {recall}")
+
+        # Calculate and print F1 score
+        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0.
+        print(f"F1 Score: {f1_score}")
+
+        # Calculate and print F2 score
+        beta = 2
+        f2_score = (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall) if  ((beta**2 * precision) + recall) != 0 else 0.
+        print(f"F2 Score: {f2_score}")
+
         
         
 if __name__ == '__main__':

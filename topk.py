@@ -66,7 +66,7 @@ if __name__ == "__main__":
     images = []
     filenames = []
 
-    for idx, filename in tqdm(enumerate(os.listdir(dataset_dir))):
+    for idx, filename in enumerate(os.listdir(dataset_dir)):
         if filename.endswith('.jpg') or filename.endswith('.png'):  # Check if the file is an image
             img_path = os.path.join(dataset_dir, filename)
             img = Image.open(img_path)  # Open the image
