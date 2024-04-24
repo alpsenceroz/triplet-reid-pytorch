@@ -116,9 +116,16 @@ if __name__ == "__main__":
         
     print(f"Best {K} values: {best_k}")
     print(f"Best {K} filenames: {best_k_filenames}")
+    best_classes = [int(filename.split('_')[0]) for filename in best_k_filenames]
+    matches = [x == anchor_id for x in best_classes]
+    print(matches)
+    
+    
 
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
+    import matplotlib.patches as patches
+
 
     anchor_image = mpimg.imread(anchor_img_path)
 
@@ -139,6 +146,14 @@ if __name__ == "__main__":
         ax.imshow(img)
         ax.set_title(f"Top {i-1}")
         ax.axis('off')
-
+        
+        # Add a colored border
+        border_color = 'green' if matches[i-2] else 'red'
+        rect = patches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, linewidth=2, edgecolor=border_color, facecolor='none')
+        ax.add_patch(rect)
+    
+    # Create directory if it doesn't exist
+    if not os.path.exists('./res'):
+        os.makedirs('./res')
     plt.savefig('./res/topk.png')
     plt.show()
