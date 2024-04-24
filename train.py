@@ -74,7 +74,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
         x_reconst, z, mu, logvar= model(imgs)
         
         anchor, positives, negatives = triplet_selector(z, lbs)
-        pairs, pair_labels = pair_selector(z, lbs, 18, 4)
+        pairs, pair_labels, _ = pair_selector(z, lbs, 18, 4)
         preds = classifier(pairs)
 
         loss1 = triplet_loss(anchor, positives, negatives)

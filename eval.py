@@ -70,13 +70,6 @@ def visualize_results(preds, pair_labels, indices, imgs):
     plt.show()
 
 
-def cmc(label, labels, topk):
-    for i in range(topk):
-        if labels[i] == label:
-            return 1
-            
-    return 0
-
 def calculate_g_prime(vector, vectors, labels):
     distances = torch.sqrt(torch.sum((vectors - vector)**2, dim=1)) # euclidian distance
     
@@ -156,20 +149,11 @@ def eval(args):
             g_primes.append([g_prime, labels])
             labels_list.append(labels)
 
-        k = 4
-        # calculate cmc@4
-        mean_cmc = 0
-
-        for label, labels in zip(lbs, labels_list):
-            cmc_ = cmc(label, labels, k)
-            mean_cmc += cmc_
-        mean_cmc /= len(labels_list)
-
-        print(f"Mean CMC@{k}: {mean_cmc}")
+        k = 5
                 
         # calculate mAP@4
-        map4 = map_at_k(lbs, labels_list, k) 
-        print(f"mAP@4:{map4}")
+        map5 = map_at_k(lbs, labels_list, k) 
+        print(f"mAP@5:{map5}")
         
         # calculate confusion matrix
         cm = confusion_matrix(pair_labels.cpu().numpy(), preds > 0.5)
