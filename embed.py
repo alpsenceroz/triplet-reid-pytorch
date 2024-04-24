@@ -11,7 +11,6 @@ import numpy as np
 import sys
 import logging
 import argparse
-import cv2
 
 from backbone import EmbedNetwork
 from datasets.Market1501 import Market1501

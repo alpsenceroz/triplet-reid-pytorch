@@ -52,9 +52,9 @@ class PairSelector(object):
         pair_indices = []  # New list to store (i ,j); given pairs[k] = embeds[i] + embeds[j]
 
         for ind, embed in enumerate(embeds):
-            ind_true = np.where(lb_eqs[ind])[0] # ind_true: 1D ndarray, indices of embeddings with the same label as embed
-            ind_false = np.where(lb_eqs[ind] == False)[0] # ind_false: 1D ndarray, indices of embeddings with different label as embed
-            ind_false = np.random.choice(ind_false, size=pair_number) # Randomly select indices from ind_false
+            ind_true = np.where(lb_eqs[ind])[0]  # ind_true: 1D ndarray, indices of embeddings with the same label as embed
+            ind_false = np.where(lb_eqs[ind] == False)[0]  # ind_false: 1D ndarray, indices of embeddings with different label as embed
+            ind_false = np.random.choice(ind_false, size=n_num)  # Randomly select indices from ind_false
             for i in range(len(ind_true)):
                 pair = torch.cat((embed, embeds[ind_true[i]])) # Concatenate the embeddings
                 pairs.append(pair)
