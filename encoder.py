@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 from torch.nn import functional as F
 from torchvision import models
@@ -74,6 +75,7 @@ class VGGEncoder(nn.Module):
         mu, logvar = self.fc3_mu(x), self.fc3_logvar(x)
         return mu, logvar
     
+    
 class DenseNetEncoder(nn.Module):
     def __init__(self, fc_hidden1=1024, fc_hidden2=768, CNN_embed_dim=256, drop_p=None):
         super(DenseNetEncoder, self).__init__()
@@ -86,7 +88,15 @@ class DenseNetEncoder(nn.Module):
         densenet = models.densenet121(pretrained=True)
         modules = list(densenet.children())[:-1]  # delete the last fc layer.
         self.densenet = nn.Sequential(*modules)
-        self.fc1 = nn.Linear(densenet.classifier.in_features, self.fc_hidden1)
+
+        # Dummy forward pass to get the output size
+        with torch.no_grad():
+            x = torch.zeros(1, 3, 256, 128)
+            x = self.densenet(x)
+        output_size = x.view(x.size(0), -1).size(1)
+
+        self.fc1 = nn.Linear(output_size, self.fc_hidden1)
+        
         self.bn1 = nn.BatchNorm1d(self.fc_hidden1, momentum=0.01)
         self.fc2 = nn.Linear(self.fc_hidden1, self.fc_hidden2)
         self.bn2 = nn.BatchNorm1d(self.fc_hidden2, momentum=0.01)
@@ -109,6 +119,7 @@ class DenseNetEncoder(nn.Module):
         mu, logvar = self.fc3_mu(x), self.fc3_logvar(x)
         return mu, logvar
     
+    
 class SwinEncoder(nn.Module):
     def __init__(self, fc_hidden1=1024, fc_hidden2=768, CNN_embed_dim=256, drop_p=None):
         super(SwinEncoder, self).__init__()
@@ -120,7 +131,14 @@ class SwinEncoder(nn.Module):
         # encoding components
         swin_transformer = timm.create_model('swin_tiny_patch4_window7_224', pretrained=True)
         self.swin_transformer = nn.Sequential(*list(swin_transformer.children())[:-1])  # remove the last layer
-        self.fc1 = nn.Linear(swin_transformer.head.in_features, self.fc_hidden1)
+
+        # Dummy forward pass to get the output size
+        with torch.no_grad():
+            x = torch.zeros(1, 3, 224, 224)
+            x = self.swin_transformer(x)
+        output_size = x.view(x.size(0), -1).size(1)
+
+        self.fc1 = nn.Linear(in_features=output_size, out_features=self.fc_hidden1)
         self.bn1 = nn.BatchNorm1d(self.fc_hidden1, momentum=0.01)
         self.fc2 = nn.Linear(self.fc_hidden1, self.fc_hidden2)
         self.bn2 = nn.BatchNorm1d(self.fc_hidden2, momentum=0.01)

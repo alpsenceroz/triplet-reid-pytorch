@@ -37,14 +37,14 @@ class Decoder(nn.Module):
             nn.ConvTranspose2d(in_channels=8, out_channels=3, kernel_size=self.k2, stride=self.s2,
                                padding=self.pd2),
             nn.BatchNorm2d(3, momentum=0.01),
-            nn.Sigmoid()    # y = (y1, y2, y3) \in [0 ,1]^3
+            nn.Sigmoid()
         )
 
-    def forward(self, z):
+    def forward(self, z, out_size=(256, 128)):
         x = self.relu(self.fc_bn4(self.fc4(z)))
         x = self.relu(self.fc_bn5(self.fc5(x))).view(-1, 64, 4, 4)
         x = self.convTrans6(x)
         x = self.convTrans7(x)
         x = self.convTrans8(x)
-        x = F.interpolate(x, size=(256, 128), mode='bilinear')
+        x = F.interpolate(x, size=out_size, mode='bilinear')
         return x

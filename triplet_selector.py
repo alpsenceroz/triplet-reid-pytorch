@@ -64,8 +64,9 @@ class PairSelector(object):
                 pairs.append(pair)
                 pair_indices.append((ind, ind_false[i]))  # Store the indices
             pair_labels = pair_labels + (len(ind_false) * [0])
-        pairs = torch.stack(pairs).cuda()
-        pair_labels = torch.from_numpy(np.expand_dims(np.array(pair_labels, dtype=np.float32), axis=1)).cuda()
+        pairs = torch.stack(pairs)
+        pair_labels = torch.from_numpy(np.expand_dims(np.array(pair_labels, dtype=np.float32), axis=1))
+
         return pairs, pair_labels, pair_indices
 
 

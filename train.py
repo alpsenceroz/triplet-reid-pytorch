@@ -26,7 +26,8 @@ from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, Triplet
 from model import VAE
 from classifier import Classifier
 
-def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
+def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
+          use_swin=False, use_dense=False, use_vgg=False, use_resnet=False):
     ## setup
     torch.multiprocessing.set_sharing_strategy('file_system')
     if not os.path.exists('./res'): os.makedirs('./res')
@@ -34,13 +35,31 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## model and loss
     logger.info('setting up backbone model and loss')
 
-    model = VAE(backbone='dense').cuda()
-    classifier = Classifier(input_size=512).cuda()
+    # use_gpu = torch.cuda.is_available()
+    use_gpu = False
+
+    if use_swin: model = VAE(backbone='swin')
+    elif use_dense: model = VAE(backbone='dense')
+    elif use_vgg: model = VAE(backbone='vgg')
+    elif use_resnet: model = VAE(backbone='resnet')
+    else:
+        print('No valid backbone model specified')
+        exit(1)
+        
+    classifier = Classifier(input_size=512)
     
-    triplet_loss = TripletLoss(margin = 0.2).cuda() # no margin means soft-margin
-    kl_divergence = KLDivergence().cuda()
-    reconstruction_loss =ReconstructionLoss().cuda()
-    bce_loss = BinaryCrossEntropy().cuda()
+    triplet_loss = TripletLoss(margin = 0.2) # no margin means soft-margin
+    kl_divergence = KLDivergence()
+    reconstruction_loss =ReconstructionLoss()
+    bce_loss = BinaryCrossEntropy()
+
+    if use_gpu:
+        model = model.cuda()
+        classifier = classifier.cuda()
+        triplet_loss = triplet_loss.cuda()
+        kl_divergence = kl_divergence.cuda()
+        reconstruction_loss = reconstruction_loss.cuda()
+        bce_loss = bce_loss.cuda()
 
     ## optimizer
     logger.info('creating optimizer')
@@ -49,7 +68,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## dataloader
     triplet_selector = BatchHardTripletSelector()
     pair_selector = PairSelector()
-    ds = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train = True)
+    ds = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train=True, use_swin=use_swin)
     sampler = BatchSampler(ds, 18, 4)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
     diter = iter(dl)
@@ -68,13 +87,20 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
             diter = iter(dl)
             imgs, lbs, _ = next(diter)
 
-        imgs = imgs.cuda()
-        lbs = lbs.cuda()
+        if use_gpu:
+            imgs = imgs.cuda()
+            lbs = lbs.cuda()
 
         x_reconst, z, mu, logvar= model(imgs)
+
         
         anchor, positives, negatives = triplet_selector(z, lbs)
         pairs, pair_labels, _ = pair_selector(z, lbs, 18, 4)
+
+        if use_gpu:
+            pairs = pairs.cuda()
+            pair_labels = pair_labels.cuda()
+
         preds = classifier(pairs)
 
         loss1 = triplet_loss(anchor, positives, negatives)
@@ -122,5 +148,10 @@ if __name__ == '__main__':
     parser.add_argument('--kl', type=float, default=0.3, help='kl divergence')
     parser.add_argument('--reconstruction', type=float, default=0.3, help='reconstruction loss')
     parser.add_argument('--bce', type=float, default=0.3, help='bce loss')
+    parser.add_argument("--use_swin", action="store_true", help="Use Swin Transformer")
+    parser.add_argument("--use_dense", action="store_true", help="Use DenseNet")
+    parser.add_argument("--use_vgg", action="store_true", help="Use VGG")
+    parser.add_argument("--use_resnet", action="store_true", help="Use ResNet")
     args = parser.parse_args()
-    train(args.lr, args.triplet, args.kl, args.reconstruction, args.bce)
+    train(args.lr, args.triplet, args.kl, args.reconstruction, args.bce,
+          use_swin=args.use_swin, use_dense=args.use_dense, use_vgg=args.use_vgg, use_resnet=args.use_resnet)

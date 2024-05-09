@@ -12,12 +12,16 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
 
         if backbone == 'resnet':
+            print("VAE using ResNet as backbone")
             self.encoder = ResNetEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
         elif backbone == 'vgg':
+            print("VAE using VGG as backbone")
             self.encoder = VGGEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
         elif backbone == 'dense':
+            print("VAE using DenseNet as backbone")
             self.encoder = DenseNetEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
         elif backbone == 'swin':
+            print("VAE using Swin Transformer as backbone")
             self.encoder = SwinEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
         else:
             raise ValueError(f'Backbone not supported: {backbone}')
@@ -37,6 +41,6 @@ class VAE(nn.Module):
     def forward(self, x):
         mu, logvar = self.encoder(x)
         z = self.reparameterize(mu, logvar)
-        x_reconst = self.decoder(z)
+        x_reconst = self.decoder(z, out_size=(x.size(2), x.size(3)))
 
         return x_reconst, z, mu, logvar
