@@ -26,17 +26,21 @@ from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, Triplet
 from model import VAE
 from classifier import Classifier
 
+max_runtime = 5 * 3600 # run 5 hours to prevent drain of colab credits
+
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
           use_swin=False, use_dense=False, use_vgg=False, use_resnet=False):
     ## setup
+    start_time = time.time()
+
     torch.multiprocessing.set_sharing_strategy('file_system')
     if not os.path.exists('./res'): os.makedirs('./res')
 
     ## model and loss
     logger.info('setting up backbone model and loss')
 
-    # use_gpu = torch.cuda.is_available()
-    use_gpu = False
+    use_gpu = torch.cuda.is_available()
+    # use_gpu = False
 
     if use_swin: model = VAE(backbone='swin')
     elif use_dense: model = VAE(backbone='dense')
@@ -126,6 +130,12 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
             #logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, lr: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, lr, time_interval))
             loss_avg = []
             t_start = t_end
+
+        elapsed_time = time.time() - start_time
+        if elapsed_time > max_runtime:
+            print("Reached the 5-hour limit. Stopping training.")
+            os._exit(0)  # Forcefully stops the notebook
+
 
         count += 1
         if count % 500 == 0:
