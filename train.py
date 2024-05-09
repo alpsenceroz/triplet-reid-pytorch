@@ -34,7 +34,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## model and loss
     logger.info('setting up backbone model and loss')
 
-    model = VAE(backbone='vgg').cuda()
+    model = VAE(backbone='dense').cuda()
     classifier = Classifier(input_size=512).cuda()
     
     triplet_loss = TripletLoss(margin = 0.2).cuda() # no margin means soft-margin
