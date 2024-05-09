@@ -23,7 +23,7 @@ from logger import logger
 
 #from model import ReID
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
-from modules import ResNet_VAE
+from model import VAE
 from classifier import Classifier
 
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
@@ -34,7 +34,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3):
     ## model and loss
     logger.info('setting up backbone model and loss')
 
-    model = ResNet_VAE().cuda()
+    model = VAE(backbone='vgg').cuda()
     classifier = Classifier(input_size=512).cuda()
     
     triplet_loss = TripletLoss(margin = 0.2).cuda() # no margin means soft-margin

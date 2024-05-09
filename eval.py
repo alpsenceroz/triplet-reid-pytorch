@@ -23,14 +23,14 @@ from logger import logger
 import matplotlib.pyplot as plt
 
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
-from modules import ResNet_VAE
+from model import VAE
 from classifier import Classifier
 
 def visualize_results(preds, pair_labels, indices, imgs):
     K = 5
 
     # Get the indices of the pairs where the pair labels are 1
-    equal_pairs_indices = [i for i, label in enumerate(pair_labels) if label == 1.]
+    equal_pairs_indices = [i for i, label in enumerate(pair_labels) if label == 0.]
 
     selected_pairs_indices = equal_pairs_indices[:K]
 
@@ -109,7 +109,7 @@ def eval(args):
         classifier_dir = args.classifier_dir
         model_dir = args.model_dir
 
-    model = ResNet_VAE().cuda()
+    model = VAE().cuda()
     classifier = Classifier(input_size=512).cuda()
 
     model.load_state_dict(torch.load(model_dir))

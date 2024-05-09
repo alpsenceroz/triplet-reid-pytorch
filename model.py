@@ -2,16 +2,22 @@ from torch.utils import data
 import torch.nn as nn
 from torch.autograd import Variable
 
-from encoder import Encoder
+from encoder import ResnetEncoder, VGGEncoder
 from decoder import Decoder
 
 ## ---------------------- ResNet VAE ---------------------- ##
 
-class ResNet_VAE(nn.Module):
-    def __init__(self, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256):
-        super(ResNet_VAE, self).__init__()
+class VAE(nn.Module):
+    def __init__(self, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, backbone='resnet'):
+        super(VAE, self).__init__()
 
-        self.encoder = Encoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
+        if backbone == 'resnet':
+            self.encoder = ResnetEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
+        elif backbone == 'vgg':
+            self.encoder = VGGEncoder(fc_hidden1, fc_hidden2, CNN_embed_dim, drop_p)
+        else:
+            raise ValueError(f'Backbone not supported: {backbone}')
+        
         self.decoder = Decoder(fc_hidden2, CNN_embed_dim)
         
 

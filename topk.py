@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torchvision import transforms
 import torch
 
-from modules import ResNet_VAE
+from model import VAE
 from classifier import Classifier
 
 BATCH_SIZE = 144
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     classifier_dir = args.classifier_dir
 
     # load model
-    model = ResNet_VAE().cuda()
+    model = VAE().cuda()
     classifier = Classifier(input_size=512).cuda()
     model.load_state_dict(torch.load(model_dir))
     classifier.load_state_dict(torch.load(classifier_dir))
