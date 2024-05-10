@@ -21,8 +21,7 @@ class Market1501(Dataset):
         super(Market1501, self).__init__(*args, **kwargs)
         self.is_train = is_train
         self.data_path = data_path
-        self.imgs = os.listdir(data_path)
-        self.imgs = [el for el in self.imgs if os.path.splitext(el)[1] == '.jpg']
+        self.imgs = [el for el in os.listdir(data_path) if os.path.splitext(el)[1] == '.jpg']
         self.lb_ids = [int(el.split('_')[0]) for el in self.imgs]
         self.lb_cams = [int(el.split('_')[1][1]) for el in self.imgs]
         self.imgs = [os.path.join(data_path, el) for el in self.imgs]
@@ -46,7 +45,7 @@ class Market1501(Dataset):
                     #RandomErasing(0.5, mean=[0.0, 0.0, 0.0])
                 ])
         else:
-            self.trans_tuple = transforms.Compose([
+            """ self.trans_tuple = transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225))
                 ])
@@ -56,6 +55,11 @@ class Market1501(Dataset):
                 transforms.Resize((288, 144)),
                 transforms.TenCrop((256, 128)),
                 self.Lambda,
+            ]) """
+            self.trans = transforms.Compose([
+                transforms.Resize((256, 128)),
+                transforms.ToTensor(),
+                transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
             ])
 
         # useful for sampler

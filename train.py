@@ -86,16 +86,16 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
     train_diter = iter(train_dataloader)
 
     val_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_validation', is_train=False, use_swin=use_swin)
-    val_sampler = BatchSampler(train_dataset, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
+    val_sampler = BatchSampler(val_dataset, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
     val_dataloader = DataLoader(val_dataset, batch_sampler=val_sampler, shuffle = False, num_workers = 4)
 
     ## train
     logger.info('start training ...')
-    loss_avg = []
+    training_loss_avg = []
     count = 0
     t_start = time.time()
 
-    best_val_loss = 0.0
+    best_val_loss = sys.maxsize
 
     while True:
         try:
@@ -137,25 +137,25 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
         loss.backward()
         optim.step()
 
-        loss_avg.append(loss.detach().cpu().numpy())
-        if count % 20 == 0 and count != 0:
-            loss_avg = sum(loss_avg) / len(loss_avg)
+        training_loss_avg.append(loss.detach().cpu().numpy())
+        if count % 5 == 0 and count != 0:
+            training_loss_avg = sum(training_loss_avg) / len(training_loss_avg)
             t_end = time.time()
             time_interval = t_end - t_start
 
-            val_loss = -1.
-            if count % 100 == 0:
+            if count % 10 == 0:
+                val_loss = 0.
                 model.eval()
                 classifier.eval()
 
                 with torch.no_grad():
+                    a = 0
                     for val_imgs, val_lbs, _ in val_dataloader:
+                        a += 1
                         if use_gpu:
                             val_imgs = val_imgs.cuda()
                             val_lbs = val_lbs.cuda()
-                        print("val_imgs shape: ", val_imgs.shape)
-                        print("val_lbs shape: ", val_lbs.shape)
-                        
+
                         x_reconst, z, mu, logvar = model(val_imgs)
 
                         same_pairs, different_pairs, _ = pair_selector(z, val_lbs, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
@@ -164,20 +164,24 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
                             same_pairs = same_pairs.cuda()
                             different_pairs = different_pairs.cuda()                    
 
-                        val_loss = bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
+                        val_loss += bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
                                             if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
                                             bce_loss(classifier(different_pairs), \
                                             (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                            torch.zeros(different_pairs.shape[0], 1)) / (NUM_VAL_CLASS_BATCH - 1))
+                                            torch.zeros(different_pairs.shape[0], 1))) / (NUM_VAL_CLASS_BATCH - 1)
                         
-                        if val_loss < best_val_loss:
-                            best_val_loss = val_loss
-                            torch.save(model.state_dict(), f'./res/{backbone_name}/best_model.pkl')
-                            torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
+                    val_loss = val_loss / len(val_dataloader)
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        torch.save(model.state_dict(), f'./res/{backbone_name}/best_model.pkl')
+                        torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
+                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
+                print("a:", a)
+            else:
+                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss1, loss2, loss3, loss4, time_interval))
+
             
-            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
-            
-            loss_avg = []
+            training_loss_avg = []
             t_start = t_end
 
         elapsed_time = time.time() - start_time
