@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torchvision import transforms
 import torch
 
-from model import VAE
+from autoencoders import VAE
 from classifier import Classifier
 
 BATCH_SIZE = 144

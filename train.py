@@ -13,7 +13,7 @@ import time
 import itertools
 import argparse
 
-from backbone import EmbedNetwork
+from backbones import ResNetEncoder, VGGEncoder, DenseNetEncoder, SwinEncoder
 from triplet_selector import BatchHardTripletSelector, PairSelector
 from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
@@ -22,8 +22,8 @@ from logger import logger
 
 
 #from model import ReID
-from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
-from model import VAE
+from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss, SparsityLoss
+from autoencoders import VAE, AE
 from classifier import Classifier
 
 RUN_HRS = 5
@@ -32,8 +32,8 @@ max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 18, 4
 NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 6, 2
 
-def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
-          use_swin=False, use_dense=False, use_vgg=False, use_resnet=False):
+def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
+          backbone_name="resnet", ae_name='ae'):
     ## setup
     start_time = time.time()
 
@@ -45,47 +45,65 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
 
     use_gpu = torch.cuda.is_available()
     # use_gpu = False
-
-    if use_swin: model = VAE(backbone='swin'); backbone_name = 'swin'
-    elif use_dense: model = VAE(backbone='dense'); backbone_name = 'dense'
-    elif use_vgg: model = VAE(backbone='vgg'); backbone_name = 'vgg'
-    elif use_resnet: model = VAE(backbone='resnet'); backbone_name = 'resnet'
+    
+    # initialize the backbone
+    if backbone_name == 'resnet':
+        backbone = ResNetEncoder()
+    elif backbone_name == 'vgg':
+        backbone = VGGEncoder()
+    elif backbone_name == 'dense':
+        backbone = DenseNetEncoder()
+    elif backbone_name == 'swin':
+        backbone  = SwinEncoder()
     else:
         print('No valid backbone model specified')
         exit(1)
-
+        
+    # initialize the AE
+    if ae_name == 'ae, sae, dae':
+        ae = AE(input_size=backbone.output_size)
+    elif ae_name == 'vae':
+        ae = VAE(input_size=backbone.output_size)
+    else:
+        print('No valid autoencoder model specified')
+        exit(1)
+        
     # create dir with name of the backbone
-    os.makedirs('./res/' + backbone_name, exist_ok=True)
+    os.makedirs(f'./res/{backbone_name}_{ae_name}', exist_ok=True)
         
     classifier = Classifier(input_size=512)
     
-    triplet_loss = TripletLoss(margin = 0.2) # no margin means soft-margin
-    kl_divergence = KLDivergence()
-    reconstruction_loss =ReconstructionLoss()
-    bce_loss = BinaryCrossEntropy()
+    criterion_triplet = TripletLoss(margin = 0.2) # no margin means soft-margin
+    criterion_kl_divergence = KLDivergence()
+    criterion_reconstruction =ReconstructionLoss()
+    criterion_bce = BinaryCrossEntropy()
+    criterion_sparsity = SparsityLoss()
+    
 
     if use_gpu:
-        model = model.cuda()
+        backbone = backbone.cuda()
+        ae = ae.cuda()
         classifier = classifier.cuda()
-        triplet_loss = triplet_loss.cuda()
-        kl_divergence = kl_divergence.cuda()
-        reconstruction_loss = reconstruction_loss.cuda()
-        bce_loss = bce_loss.cuda()
+        criterion_triplet = criterion_triplet.cuda()
+        criterion_kl_divergence = criterion_kl_divergence.cuda()
+        criterion_reconstruction = criterion_reconstruction.cuda()
+        criterion_bce = criterion_bce.cuda()
+        criterion_sparsity.cuda()
+        
 
     ## optimizer
     logger.info('creating optimizer')
-    optim = torch.optim.AdamW(list(model.parameters()) + list(classifier.parameters()), lr = lr)
+    optim = torch.optim.AdamW(list(backbone.parameters()) + list(ae.parameters()) + list(classifier.parameters()), lr = lr)
 
     ## dataloader
     triplet_selector = BatchHardTripletSelector()
     pair_selector = PairSelector()
-
-    train_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train=True, use_swin=use_swin)
+    train_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train=True, use_swin=(backbone_name == 'swin'))
     train_sampler = BatchSampler(train_dataset, NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH)
     train_dataloader = DataLoader(train_dataset, batch_sampler=train_sampler, num_workers = 4)
     train_diter = iter(train_dataloader)
 
-    val_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_validation', is_train=False, use_swin=use_swin)
+    val_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_validation', is_train=False, use_swin=(backbone_name == 'swin'))
     val_sampler = BatchSampler(val_dataset, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
     val_dataloader = DataLoader(val_dataset, batch_sampler=val_sampler, shuffle = False, num_workers = 4)
 
@@ -108,30 +126,44 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
             imgs = imgs.cuda()
             lbs = lbs.cuda()
 
-        model.train()
+        backbone.train()
+        ae.train()
         classifier.train()
 
-        x_reconst, z, mu, logvar= model(imgs)
-        anchor, positives, negatives = triplet_selector(z, lbs)
+        backbone_output = backbone(imgs)
+        if (ae_name == 'vae'):
+            x_reconst, x, mu, logvar= ae(backbone_output)
+        else:
+            x_reconst, x = ae(backbone_output)
+        
+        anchor, positives, negatives = triplet_selector(x, lbs)
 
-        same_pairs, different_pairs, _ = pair_selector(z, lbs, NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH)
+        same_pairs, different_pairs, _ = pair_selector(x, lbs, NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH)
 
         if use_gpu:
             same_pairs = same_pairs.cuda()
             different_pairs = different_pairs.cuda()
 
-        same_loss = bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
+        same_loss = criterion_bce(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
                                                       if use_gpu else torch.ones(same_pairs.shape[0], 1)))
-        different_loss = bce_loss(classifier(different_pairs), (torch.zeros(different_pairs.shape[0], 1).cuda() \
+        different_loss = criterion_bce(classifier(different_pairs), (torch.zeros(different_pairs.shape[0], 1).cuda() \
                                                                 if use_gpu else torch.zeros(different_pairs.shape[0], 1)))
         different_loss = different_loss / (NUM_TRAIN_CLASS_BATCH - 1)  # 1 / (c - 1)
 
-        loss1 = triplet_loss(anchor, positives, negatives)
-        loss2 = kl_divergence(mu, logvar)
-        loss3 = reconstruction_loss(x_reconst, imgs)
-        loss4 = same_loss + different_loss
-        
-        loss = triplet*loss1 + kl*loss2 + reconstruction*loss3 + bce*loss4
+        loss_triplet = criterion_triplet(anchor, positives, negatives) 
+        loss_reconsruction = criterion_reconstruction(x_reconst, imgs)
+        loss_bce = (same_loss + different_loss)
+        loss = triplet*loss_triplet + reconstruction*loss_reconsruction + bce*loss_bce
+       
+        loss_kl_divergence = -1
+        loss_sparsity = -1
+        if (ae_name == 'vae'):
+            loss_kl_divergence = criterion_kl_divergence(mu, logvar)
+            loss += kl*loss_kl_divergence
+            
+        if (ae_name == 'sae'):
+            loss_sparsity = criterion_sparsity(ae, backbone_output)
+            loss += sparsity * loss_sparsity
 
         optim.zero_grad()
         loss.backward()
@@ -145,38 +177,40 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
 
             if count % 10 == 0:
                 val_loss = 0.
-                model.eval()
+                backbone.eval()
+                ae.eval()
                 classifier.eval()
 
-                with torch.no_grad():
-                    a = 0
+                with torch.inference_mode():
+                    val_loss = 0
                     for val_imgs, val_lbs, _ in val_dataloader:
-                        a += 1
                         if use_gpu:
                             val_imgs = val_imgs.cuda()
                             val_lbs = val_lbs.cuda()
+                        
+                        if (ae_name == 'vae'):
+                            x_reconst, x, mu, logvar= ae(backbone_output)
+                        else:
+                            x_reconst, x = ae(backbone_output)
 
-                        x_reconst, z, mu, logvar = model(val_imgs)
-
-                        same_pairs, different_pairs, _ = pair_selector(z, val_lbs, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
+                        same_pairs, different_pairs, _ = pair_selector(x, val_lbs, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
 
                         if use_gpu:
                             same_pairs = same_pairs.cuda()
                             different_pairs = different_pairs.cuda()                    
 
-                        val_loss += bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
+                        val_loss = criterion_bce(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
                                             if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
-                                            bce_loss(classifier(different_pairs), \
+                                            criterion_bce(classifier(different_pairs), \
                                             (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                            torch.zeros(different_pairs.shape[0], 1))) / (NUM_VAL_CLASS_BATCH - 1)
+                                            torch.zeros(different_pairs.shape[0], 1)) / (NUM_VAL_CLASS_BATCH - 1))
                         
                     val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
-                        best_val_loss = val_loss
-                        torch.save(model.state_dict(), f'./res/{backbone_name}/best_model.pkl')
-                        torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
+                        torch.save(backbone.state_dict(), f'./res/{backbone_name}_{ae_name}/best_backbone.pkl')
+                        torch.save(ae.state_dict(), f'./res/{backbone_name}_{ae_name}/best_backbone.pkl')
+                        torch.save(classifier.state_dict(), f'./res/{backbone_name}_{ae_name}/best_classifier.pkl')
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
-                print("a:", a)
             else:
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss1, loss2, loss3, loss4, time_interval))
 
@@ -193,10 +227,10 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
         if count % 500 == 0:
             ## dump model
             logger.info('saving trained model')
-            path = './res/model' + '_' + str(count) + '.pkl'
-            path_cls = './res/classifier' + '_' + str(count) + '.pkl'
-            torch.save(model.state_dict(), path)
-            torch.save(classifier.state_dict(), path_cls)
+            torch.save(backbone.state_dict(), f'./res/{backbone_name}_{ae_name}/backbone_{str(count)}.pkl')
+            torch.save(ae.state_dict(), f'./res/{backbone_name}_{ae_name}/ae_{str(count)}.pkl')
+            torch.save(classifier.state_dict(), f'./res/{backbone_name}_{ae_name}/classifier_{str(count)}.pkl')
+            
         if count == 25000: break
 
 
@@ -206,14 +240,18 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
+    
     parser.add_argument('--triplet', type=float, default=0.3, help='triplet loss')
-    parser.add_argument('--kl', type=float, default=0.3, help='kl divergence')
+    parser.add_argument('--kl', type=float, default=0, help='kl divergence')
     parser.add_argument('--reconstruction', type=float, default=0.3, help='reconstruction loss')
     parser.add_argument('--bce', type=float, default=0.3, help='bce loss')
-    parser.add_argument("--use_swin", action="store_true", help="Use Swin Transformer")
-    parser.add_argument("--use_dense", action="store_true", help="Use DenseNet")
-    parser.add_argument("--use_vgg", action="store_true", help="Use VGG")
-    parser.add_argument("--use_resnet", action="store_true", help="Use ResNet")
+    parser.add_argument('--sparsity', type=float, default=0, help='sparsity loss')
+    
+    parser.add_argument('--backbone-name', type=str, default=0, help='backbone name')
+    
+    parser.add_argument('--ae-name', type=str, default=0, help='ae name')
+    
+    
     args = parser.parse_args()
     train(args.lr, args.triplet, args.kl, args.reconstruction, args.bce,
-          use_swin=args.use_swin, use_dense=args.use_dense, use_vgg=args.use_vgg, use_resnet=args.use_resnet)
+          backbone_name=args.backbone_name, ae_name=args.ae_name)

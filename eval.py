@@ -14,7 +14,7 @@ import time
 import itertools
 import argparse
 
-from backbone import EmbedNetwork
+from backbones import EmbedNetwork
 from triplet_selector import BatchHardTripletSelector, PairSelector
 from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
@@ -23,7 +23,7 @@ from logger import logger
 import matplotlib.pyplot as plt
 
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
-from model import VAE
+from autoencoders import VAE
 from classifier import Classifier
 
 def visualize_results(preds, pair_labels, indices, imgs):

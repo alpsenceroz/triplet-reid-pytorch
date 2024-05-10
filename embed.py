@@ -12,7 +12,7 @@ import sys
 import logging
 import argparse
 
-from backbone import EmbedNetwork
+from backbones import EmbedNetwork
 from datasets.Market1501 import Market1501
 
 
