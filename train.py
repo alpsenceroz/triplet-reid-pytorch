@@ -38,7 +38,10 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
     start_time = time.time()
 
     torch.multiprocessing.set_sharing_strategy('file_system')
-    if not os.path.exists('./res'): os.makedirs('./res')
+    if not os.path.exists('./res'): 
+        os.makedirs('./res')
+    if not os.path.exists(f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/'): 
+        os.makedirs(f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/')
 
     ## model and loss
     logger.info('setting up backbone model and loss')
@@ -211,9 +214,9 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                         
                     val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
-                        torch.save(backbone.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_backbone.pkl')
-                        torch.save(ae.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_ae.pkl')
-                        torch.save(classifier.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_classifier.pkl')
+                        torch.save(backbone.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_backbone.pkl')
+                        torch.save(ae.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_ae.pkl')
+                        torch.save(classifier.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_classifier.pkl')
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, val_loss, time_interval))
             else:
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, time_interval))
