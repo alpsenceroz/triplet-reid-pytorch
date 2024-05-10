@@ -54,7 +54,7 @@ class VAE(nn.Module):
 
 class AE(nn.Module):
     def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, orig_height=256, orig_width=128):
-        super(VAE, self).__init__()
+        super(AE, self).__init__()
 
         self.input_size = input_size
         self.fc_hidden1 = fc_hidden1

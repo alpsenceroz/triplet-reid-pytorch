@@ -30,7 +30,7 @@ max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
 NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
 
-def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
+def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
           backbone_name="resnet", ae_name='ae'):
     ## setup
     start_time = time.time()
@@ -101,6 +101,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
     ## optimizer
     logger.info('creating optimizer')
     optim = torch.optim.AdamW(list(backbone.parameters()) + list(ae.parameters()) + list(classifier.parameters()), lr = lr)
+    optim_classifier = torch.optim.AdamW(list(classifier.parameters()), lr = lr_classifier)
 
     ## dataloader
     triplet_selector = BatchHardTripletSelector()
@@ -175,8 +176,10 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
             loss += sparsity * loss_sparsity
 
         optim.zero_grad()
+        optim_classifier.zero_grad()
         loss.backward()
         optim.step()
+        optim_classifier.step()
 
         training_loss_avg.append(loss.detach().cpu().numpy())
         if count % 5 == 0 and count != 0:
@@ -262,6 +265,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
+    parser.add_argument('--lr-classifier', type=float, default=3e-4, help='Learning rate for classifier')
     
     parser.add_argument('--triplet', type=float, default=0.3, help='triplet loss')
     parser.add_argument('--kl', type=float, default=0, help='kl divergence')
@@ -275,5 +279,5 @@ if __name__ == '__main__':
     
     
     args = parser.parse_args()
-    train(args.lr, args.triplet, args.kl, args.reconstruction, args.bce,
+    train(args.lr, args.lr_classifier, args.triplet, args.kl, args.reconstruction, args.bce,
           backbone_name=args.backbone_name, ae_name=args.ae_name)
