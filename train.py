@@ -43,8 +43,8 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
     ## model and loss
     logger.info('setting up backbone model and loss')
 
-    # use_gpu = torch.cuda.is_available()
-    use_gpu = False
+    use_gpu = torch.cuda.is_available()
+    # use_gpu = False
 
     if use_swin: model = VAE(backbone='swin'); backbone_name = 'swin'
     elif use_dense: model = VAE(backbone='dense'); backbone_name = 'dense'
@@ -79,6 +79,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
     ## dataloader
     triplet_selector = BatchHardTripletSelector()
     pair_selector = PairSelector()
+
     train_dataset = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train=True, use_swin=use_swin)
     train_sampler = BatchSampler(train_dataset, NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH)
     train_dataloader = DataLoader(train_dataset, batch_sampler=train_sampler, num_workers = 4)
@@ -141,41 +142,43 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
             loss_avg = sum(loss_avg) / len(loss_avg)
             t_end = time.time()
             time_interval = t_end - t_start
+
+            val_loss = -1.
+            if count % 100 == 0:
+                model.eval()
+                classifier.eval()
+
+                with torch.no_grad():
+                    for val_imgs, val_lbs, _ in val_dataloader:
+                        if use_gpu:
+                            val_imgs = val_imgs.cuda()
+                            val_lbs = val_lbs.cuda()
+                        print("val_imgs shape: ", val_imgs.shape)
+                        print("val_lbs shape: ", val_lbs.shape)
+                        
+                        x_reconst, z, mu, logvar = model(val_imgs)
+
+                        same_pairs, different_pairs, _ = pair_selector(z, val_lbs, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
+
+                        if use_gpu:
+                            same_pairs = same_pairs.cuda()
+                            different_pairs = different_pairs.cuda()                    
+
+                        val_loss = bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
+                                            if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
+                                            bce_loss(classifier(different_pairs), \
+                                            (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
+                                            torch.zeros(different_pairs.shape[0], 1)) / (NUM_VAL_CLASS_BATCH - 1))
+                        
+                        if val_loss < best_val_loss:
+                            best_val_loss = val_loss
+                            torch.save(model.state_dict(), f'./res/{backbone_name}/best_model.pkl')
+                            torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
+            
+            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
             
             loss_avg = []
             t_start = t_end
-
-            model.eval()
-            classifier.eval()
-
-            with torch.no_grad():
-                val_loss = 0
-                for val_imgs, val_lbs, _ in val_dataloader:
-                    if use_gpu:
-                        val_imgs = val_imgs.cuda()
-                        val_lbs = val_lbs.cuda()
-                    x_reconst, z, mu, logvar = model(val_imgs)
-
-                    same_pairs, different_pairs, _ = pair_selector(z, val_lbs, NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH)
-
-                    if use_gpu:
-                        same_pairs = same_pairs.cuda()
-                        different_pairs = different_pairs.cuda()                    
-
-                    val_loss = bce_loss(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
-                                        if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
-                                        bce_loss(classifier(different_pairs), \
-                                        (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                        torch.zeros(different_pairs.shape[0], 1)) / (NUM_VAL_CLASS_BATCH - 1))
-                    
-                    if val_loss < best_val_loss:
-                        best_val_loss = val_loss
-                        torch.save(model.state_dict(), f'./res/{backbone_name}/best_model.pkl')
-                        torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
-            
-            logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, \
-                        reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}' \
-                        .format(count, loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
 
         elapsed_time = time.time() - start_time
         if elapsed_time > max_runtime:
