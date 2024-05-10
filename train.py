@@ -155,7 +155,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                                                       if use_gpu else torch.ones(same_pairs.shape[0], 1)))
         different_loss = criterion_bce(classifier(different_pairs), (torch.zeros(different_pairs.shape[0], 1).cuda() \
                                                                 if use_gpu else torch.zeros(different_pairs.shape[0], 1)))
-        different_loss = different_loss / (NUM_TRAIN_CLASS_BATCH - 1)  # 1 / (c - 1)
+        # different_loss = different_loss / (NUM_TRAIN_CLASS_BATCH - 1)  # 1 / (c - 1)
 
         loss_triplet = criterion_triplet(anchor, positives, negatives) 
         loss_reconsruction = criterion_reconstruction(x_reconst, imgs)
@@ -212,9 +212,9 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                                             if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
                                             criterion_bce(classifier(different_pairs), \
                                             (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                            torch.zeros(different_pairs.shape[0], 1))) / (NUM_VAL_CLASS_BATCH - 1)
+                                            torch.zeros(different_pairs.shape[0], 1))) # / (NUM_VAL_CLASS_BATCH - 1)
                         
-                    val_loss = val_loss / len(val_dataloader)
+                    # val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
                         torch.save(backbone.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_backbone.pkl')
                         torch.save(ae.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_ae.pkl')
