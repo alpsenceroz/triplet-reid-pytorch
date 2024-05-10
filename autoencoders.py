@@ -29,7 +29,7 @@ class VAE(nn.Module):
         self.fc_mu = nn.Linear(self.fc_hidden2, self.CNN_embed_dim)  # output = CNN embedding latent variables
         self.fc_logvar = nn.Linear(self.fc_hidden2, self.CNN_embed_dim)  # output = CNN embedding latent variables
         
-        self.decoder = Decoder(fc_hidden2, CNN_embed_dim)
+        self.decoder = Decoder(CNN_embed_dim, fc_hidden2)
         
 
     def reparameterize(self, mu, logvar):
@@ -92,7 +92,6 @@ class AE(nn.Module):
         x = self.encoder(x)
         if self.drop_p and self.training:
             x = F.dropout(x, p=self.drop_p, training=self.training)
-
         x_reconst = self.decoder(x, out_size=(self.orig_height, self.orig_width))
 
         return x_reconst, x
