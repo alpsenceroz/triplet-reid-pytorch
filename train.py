@@ -227,12 +227,13 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
                         torch.save(ae.state_dict(), save_folder_name / 'best_ae.pkl')
                         torch.save(classifier.state_dict(), save_folder_name / 'best_classifier.pkl')
                     
-                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, val_loss, time_interval))
+                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, sparsity loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_sparsity, loss_reconsruction, loss_bce, val_loss, time_interval))
                 losses.append({
                     'iteration': count,
                     'training_loss_avg': training_loss_avg,
                     'loss_triplet': loss_triplet.item(),
                     'loss_kl_divergence': loss_kl_divergence.item() if ae_name == 'vae' else None,
+                    'loss_sparsity': loss_sparsity.item() if ae_name == 'sae' else None,
                     'loss_reconstruction': loss_reconsruction.item(),
                     'loss_bce': loss_bce.item(),
                     'val_loss': val_loss
@@ -240,7 +241,7 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
                 df = pd.DataFrame(losses)
                 df.to_csv(save_folder_name / 'losses.csv', index=False)
             else:
-                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, time_interval))
+                logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, sparsity loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_sparsity, loss_reconsruction, loss_bce, time_interval))
             
             training_loss_avg = []
             t_start = t_end
