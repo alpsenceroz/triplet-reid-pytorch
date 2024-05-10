@@ -48,22 +48,26 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
     
     # initialize the backbone
     if backbone_name == 'resnet':
+        output_size = (256, 128)
         backbone = ResNetEncoder()
     elif backbone_name == 'vgg':
+        output_size = (256, 128)
         backbone = VGGEncoder()
     elif backbone_name == 'dense':
+        output_size = (256, 128)
         backbone = DenseNetEncoder()
     elif backbone_name == 'swin':
+        output_size = (224, 224)
         backbone  = SwinEncoder()
     else:
         print('No valid backbone model specified')
         exit(1)
         
     # initialize the AE
-    if ae_name == 'ae, sae, dae':
-        ae = AE(input_size=backbone.output_size)
+    if ae_name in ['ae', 'sae', 'dae']:
+        ae = AE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1])
     elif ae_name == 'vae':
-        ae = VAE(input_size=backbone.output_size)
+        ae = VAE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1])
     else:
         print('No valid autoencoder model specified')
         exit(1)
