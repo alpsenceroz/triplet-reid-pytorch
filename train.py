@@ -31,8 +31,17 @@ max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
 NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
 
-def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
-          backbone_name="resnet", ae_name='ae', result_dir='./'):
+def train(lr=3e-4, 
+          lr_classifier=3e-4, 
+          triplet=0.3, kl=0.3, 
+          reconstruction=0.3, 
+          bce=0.3, sparsity=0.3,
+          backbone_name="resnet", 
+          ae_name='ae', 
+          result_dir='./',
+          pre_backbone = None,
+          pre_ae = None,
+          pre_classifier = None):
     ## setup
     start_time = time.time()
 
@@ -51,6 +60,7 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
     use_gpu = torch.cuda.is_available()
     # use_gpu = False
     
+    
     # initialize the backbone
     if backbone_name == 'resnet':
         output_size = (256, 128)
@@ -68,6 +78,9 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
         print('No valid backbone model specified')
         exit(1)
         
+    if pre_backbone is not None:
+        backbone.load_state_dict(torch.load(pre_backbone))
+        
     # initialize the AE
     if ae_name in ['ae', 'sae', 'dae']:
         ae = AE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1])
@@ -76,11 +89,17 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
     else:
         print('No valid autoencoder model specified')
         exit(1)
+    
+    if pre_ae is not None:
+        ae.load_state_dict(torch.load(pre_ae))
         
     # create dir with name of the backbone
     os.makedirs(f'./res/{backbone_name}_{ae_name}', exist_ok=True)
         
     classifier = Classifier(input_size=512)
+    if pre_classifier is not None:
+        classifier.load_state_dict(torch.load(pre_classifier))
+
     
     criterion_triplet = TripletLoss(margin = 0.2) # no margin means soft-margin
     criterion_kl_divergence = KLDivergence()
@@ -281,7 +300,22 @@ if __name__ == '__main__':
     parser.add_argument('--ae-name', type=str, default='ae', help='ae name')
     parser.add_argument('--result-dir', type=str, default='./', help='directory to save models')
     
+    parser.add_argument('--pre-backbone', type=str, default=None, help='directory to save models')
+    parser.add_argument('--pre-ae', type=str, default=None, help='directory to save models')
+    parser.add_argument('--pre-classifier', type=str, default=None, help='directory to save models')
+    
     
     args = parser.parse_args()
-    train(lr=args.lr, lr_classifier=args.lr_classifier,triplet= args.triplet, kl=args.kl, reconstruction=args.reconstruction, sparsity=args.sparsity, bce=args.bce,
-          backbone_name=args.backbone_name, ae_name=args.ae_name, result_dir = args.result_dir)
+    train(lr=args.lr,
+          lr_classifier=args.lr_classifier,
+          triplet= args.triplet, 
+          kl=args.kl, 
+          reconstruction=args.reconstruction, 
+          sparsity=args.sparsity, 
+          bce=args.bce,
+          backbone_name=args.backbone_name, 
+          ae_name=args.ae_name, 
+          result_dir = args.result_dir,
+          pre_backbone = args.backbone,
+          pre_ae = args.pre_ae,
+          pre_classifier = args.pre_classifier)
