@@ -4,6 +4,7 @@
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 class ReconstructionLoss(nn.Module):
     def __init__(self):
@@ -35,6 +36,22 @@ class BinaryCrossEntropy(nn.Module):
     
     def forward(self, y_hat, y):
         return self.loss(y_hat, y)
+    
+
+class SparsityLoss(nn.Module):
+    def __init__(self):
+        super(SparsityLoss, self).__init__()
+
+    def forward(self, autoencoder, images):
+        model_children = list(autoencoder.children())
+        loss = 0
+        values = images
+        for i in range(len(model_children)):
+            values = F.relu((model_children[i](values)))
+            loss += torch.mean(torch.abs(values))
+        return loss
+        
+    
 
 class TripletLoss(nn.Module):
     '''

@@ -13,7 +13,7 @@ import logging
 import time
 import itertools
 
-from backbone import EmbedNetwork
+from backbones import EmbedNetwork
 from loss import TripletLoss
 from triplet_selector import BatchHardTripletSelector
 from batch_sampler import BatchSampler

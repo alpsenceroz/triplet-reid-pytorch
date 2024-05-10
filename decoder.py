@@ -2,7 +2,7 @@ from torch import nn
 from torch.nn import functional as F
 
 class Decoder(nn.Module):
-    def __init__(self, fc_hidden2=768, CNN_embed_dim=256):
+    def __init__(self, CNN_embed_dim=256, fc_hidden2=768):
         super(Decoder, self).__init__()
 
         self.fc_hidden2, self.CNN_embed_dim = fc_hidden2, CNN_embed_dim
