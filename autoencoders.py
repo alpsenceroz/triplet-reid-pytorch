@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from decoder import Decoder
 
 class VAE(nn.Module):
-    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, orig_height=256, orig_width=128):
+    def __init__(self, input_size=2048, fc_hidden1=1536, fc_hidden2=1024, drop_p=0.3, CNN_embed_dim=728, orig_height=256, orig_width=128):
         super(VAE, self).__init__()
 
         self.input_size = input_size
@@ -53,7 +53,7 @@ class VAE(nn.Module):
         return x_reconst, x, mu, logvar
 
 class AE(nn.Module):
-    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, orig_height=256, orig_width=128):
+    def __init__(self, input_size=2048, fc_hidden1=1536, fc_hidden2=1024, drop_p=0.3, CNN_embed_dim=728, orig_height=256, orig_width=128):
         super(AE, self).__init__()
 
         self.input_size = input_size
