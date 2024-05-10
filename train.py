@@ -29,8 +29,8 @@ from classifier import Classifier
 RUN_HRS = 5
 max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 
-NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 18, 4
-NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 6, 2
+NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 250, 10
+NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 250, 10
 
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
           backbone_name="resnet", ae_name='ae'):
@@ -207,9 +207,9 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                         
                     val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
-                        torch.save(backbone.state_dict(), f'./res/{backbone_name}_{ae_name}/best_backbone.pkl')
-                        torch.save(ae.state_dict(), f'./res/{backbone_name}_{ae_name}/best_backbone.pkl')
-                        torch.save(classifier.state_dict(), f'./res/{backbone_name}_{ae_name}/best_classifier.pkl')
+                        torch.save(backbone.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_backbone.pkl')
+                        torch.save(ae.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_ae.pkl')
+                        torch.save(classifier.state_dict(), f'./res/{backbone_name}_{ae_name}_{lr}_{triplet}_{kl}_{sparsity}_{reconstruction}_{bce}/best_classifier.pkl')
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, val_loss, time_interval))
             else:
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, time_interval))
