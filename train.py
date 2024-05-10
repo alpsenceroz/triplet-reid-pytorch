@@ -28,6 +28,8 @@ from classifier import Classifier
 
 max_runtime = 5 * 3600 # run 5 hours to prevent drain of colab credits
 
+NUM_CLASS_BATCH, NUM_INSTANCES_BATCH = 18, 4
+
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
           use_swin=False, use_dense=False, use_vgg=False, use_resnet=False):
     ## setup
@@ -73,7 +75,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
     triplet_selector = BatchHardTripletSelector()
     pair_selector = PairSelector()
     ds = Market1501('datasets/Market-1501-v15.09.15/bounding_box_train', is_train=True, use_swin=use_swin)
-    sampler = BatchSampler(ds, 18, 4)
+    sampler = BatchSampler(ds, NUM_CLASS_BATCH, NUM_INSTANCES_BATCH)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
     diter = iter(dl)
 
@@ -99,18 +101,21 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
 
         
         anchor, positives, negatives = triplet_selector(z, lbs)
-        pairs, pair_labels, _ = pair_selector(z, lbs, 18, 4)
+        # pairs, pair_labels, _ = pair_selector(z, lbs, 18, 4)
+        same_pairs, different_pairs, _ = pair_selector(z, lbs, NUM_CLASS_BATCH, NUM_INSTANCES_BATCH)
+        same_loss = bce_loss(classifier(same_pairs), torch.ones(same_pairs.shape[0], 1).cuda())
+        different_loss = bce_loss(classifier(different_pairs), torch.zeros(different_pairs.shape[0], 1).cuda())
+        different_loss = different_loss / (NUM_INSTANCES_BATCH)  # 1 / (c - 1)
 
         if use_gpu:
             pairs = pairs.cuda()
             pair_labels = pair_labels.cuda()
 
-        preds = classifier(pairs)
-
         loss1 = triplet_loss(anchor, positives, negatives)
         loss2 = kl_divergence(mu, logvar)
         loss3 = reconstruction_loss(x_reconst, imgs)
-        loss4 = bce_loss(preds, pair_labels)
+
+        loss4 = same_loss + different_loss
         
         loss = triplet * loss1 + \
                 kl * loss2 + \
