@@ -88,7 +88,6 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
     criterion_bce = BinaryCrossEntropy()
     criterion_sparsity = SparsityLoss()
     
-
     if use_gpu:
         backbone = backbone.cuda()
         ae = ae.cuda()
@@ -97,7 +96,7 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
         criterion_kl_divergence = criterion_kl_divergence.cuda()
         criterion_reconstruction = criterion_reconstruction.cuda()
         criterion_bce = criterion_bce.cuda()
-        criterion_sparsity.cuda()
+        criterion_sparsity = criterion_sparsity.cuda()
         
 
     ## optimizer

@@ -9,6 +9,7 @@ import torch.nn.functional as F
 class ReconstructionLoss(nn.Module):
     def __init__(self):
         super(ReconstructionLoss, self).__init__()
+        self.mse_loss = nn.MSELoss(reduction='mean')
 
     def forward(self, reconstructed, original):
         # Flatten inputs if they are not already flattened
@@ -17,7 +18,7 @@ class ReconstructionLoss(nn.Module):
             original = original.view(original.size(0), -1)
 
         # Compute Mean Squared Error (MSE) loss
-        reconstruction_loss = nn.MSELoss(reduction='mean')(reconstructed, original)
+        reconstruction_loss = self.mse_loss(reconstructed, original)
         
         return reconstruction_loss
 
