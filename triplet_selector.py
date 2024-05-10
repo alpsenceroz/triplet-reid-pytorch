@@ -45,29 +45,27 @@ class PairSelector(object):
         labels = labels.contiguous().cpu().numpy().reshape((-1, 1)) # labels: 2D ndarray of shape (n, 1); n = # of embeddings
         lb_eqs = labels == labels.T # lb_eqs: 2D ndarray of shape (n, n); n = # of embeddings
 
-        pair_number = int(n_num * (n_num - 1) / 2)
-        pairs = []
-        pair_labels = [] # pair_labels[i] = 1 if pairs[i] are of the same id, 0 otherwise
+        # pair_number = int(n_num * (n_num - 1) / 2)
+        same_pairs = []
+        diff_pairs = []
         pair_indices = []  # New list to store (i ,j); given pairs[k] = embeds[i] + embeds[j]
 
         for ind, embed in enumerate(embeds):
             ind_true = np.where(lb_eqs[ind])[0]  # ind_true: 1D ndarray, indices of embeddings with the same label as embed
             ind_false = np.where(lb_eqs[ind] == False)[0]  # ind_false: 1D ndarray, indices of embeddings with different label as embed
-            ind_false = np.random.choice(ind_false, size=n_num)  # Randomly select indices from ind_false
             for i in range(len(ind_true)):
                 pair = torch.cat((embed, embeds[ind_true[i]])) # Concatenate the embeddings
-                pairs.append(pair)
+                same_pairs.append(pair)
                 pair_indices.append((ind, ind_true[i]))  # Store the indices
-            pair_labels = pair_labels + (len(ind_true) * [1]) # Append 1 to the pair_labels for the same label pairs
             for i in range(len(ind_false)):
                 pair = torch.cat((embed, embeds[ind_false[i]]))
-                pairs.append(pair)
+                diff_pairs.append(pair)
                 pair_indices.append((ind, ind_false[i]))  # Store the indices
-            pair_labels = pair_labels + (len(ind_false) * [0])
-        pairs = torch.stack(pairs)
+        same_pairs = torch.stack(same_pairs)
+        diff_pairs = torch.stack(diff_pairs)
         pair_labels = torch.from_numpy(np.expand_dims(np.array(pair_labels, dtype=np.float32), axis=1))
 
-        return pairs, pair_labels, pair_indices
+        return same_pairs, diff_pairs, pair_indices
 
 
 if __name__ == '__main__':
