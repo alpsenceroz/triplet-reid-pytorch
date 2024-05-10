@@ -5,10 +5,8 @@ from torch.nn import functional as F
 
 from decoder import Decoder
 
-## ---------------------- ResNet VAE ---------------------- ##
-
 class VAE(nn.Module):
-    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, backbone='resnet'):
+    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256):
         super(VAE, self).__init__()
 
         self.input_size = input_size
@@ -16,7 +14,6 @@ class VAE(nn.Module):
         self.fc_hidden2 = fc_hidden2
         self.CNN_embed_dim = CNN_embed_dim
         self.drop_p = drop_p
-        
         
         self.encoder = nn.Sequential(
             nn.Linear(self.input_size, self.fc_hidden1),
@@ -53,7 +50,7 @@ class VAE(nn.Module):
         return x_reconst, z, mu, logvar
 
 class AE(nn.Module):
-    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256, backbone='resnet'):
+    def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256):
         super(VAE, self).__init__()
 
         self.input_size = input_size
