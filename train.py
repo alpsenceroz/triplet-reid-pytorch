@@ -30,7 +30,7 @@ RUN_HRS = 5
 max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 
 NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
-NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 5
+NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
 
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
           backbone_name="resnet", ae_name='ae'):
@@ -208,13 +208,13 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                             same_pairs = same_pairs.cuda()
                             different_pairs = different_pairs.cuda()                    
 
-                        val_loss = criterion_bce(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
-                                            if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
+                        val_loss += criterion_bce(classifier(same_pairs), (torch.ones(same_pairs.shape[0], 1).cuda() \
+                                            if use_gpu else torch.ones(same_pairs.shape[0], 1))).item() + \
                                             criterion_bce(classifier(different_pairs), \
                                             (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                            torch.zeros(different_pairs.shape[0], 1))) # / (NUM_VAL_CLASS_BATCH - 1)
+                                            torch.zeros(different_pairs.shape[0], 1))).item() # / (NUM_VAL_CLASS_BATCH - 1)
                         
-                    # val_loss = val_loss / len(val_dataloader)
+                    val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
                         torch.save(backbone.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_backbone.pkl')
                         torch.save(ae.state_dict(), f'./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/best_ae.pkl')
