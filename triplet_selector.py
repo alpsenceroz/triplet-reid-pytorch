@@ -62,7 +62,6 @@ class PairSelector(object):
                 pair_indices.append((ind, ind_false[i]))  # Store the indices
         same_pairs = torch.stack(same_pairs)
         diff_pairs = torch.stack(diff_pairs)
-        pair_labels = torch.from_numpy(np.expand_dims(np.array(pair_labels, dtype=np.float32), axis=1))
 
         return same_pairs, diff_pairs, pair_indices
 

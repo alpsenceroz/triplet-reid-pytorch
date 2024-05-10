@@ -174,7 +174,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3,
                         torch.save(classifier.state_dict(), f'./res/{backbone_name}/best_classifier.pkl')
             
             logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, \
-                        reconstruction loss: {:4f}, \BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}' \
+                        reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}' \
                         .format(count, loss_avg, loss1, loss2, loss3, loss4, val_loss, time_interval))
 
         elapsed_time = time.time() - start_time
