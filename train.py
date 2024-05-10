@@ -96,7 +96,7 @@ def train(lr=3e-4,
     # create dir with name of the backbone
     os.makedirs(f'./res/{backbone_name}_{ae_name}', exist_ok=True)
         
-    classifier = Classifier(input_size=512)
+    classifier = Classifier(input_size=1456)
     if pre_classifier is not None:
         classifier.load_state_dict(torch.load(pre_classifier))
 
