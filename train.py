@@ -41,7 +41,7 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
     if not os.path.exists(result_dir): 
         os.makedirs(result_dir)
 
-    save_folder_name = result_dir / f"backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})"
+    save_folder_name = result_dir / f"backbone({backbone_name})_ae({ae_name})_lr({lr})_lr_classifier({lr_classifier})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})"
     if not os.path.exists(save_folder_name): 
         os.makedirs(save_folder_name)
 
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     parser.add_argument('--backbone-name', type=str, default='resnet', help='backbone name')
     
     parser.add_argument('--ae-name', type=str, default='ae', help='ae name')
-    parser.add_argument('--result-dir', type=str, default='./', help='ae name')
+    parser.add_argument('--result-dir', type=str, default='./', help='directory to save models')
     
     
     args = parser.parse_args()
