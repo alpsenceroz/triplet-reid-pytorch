@@ -212,7 +212,7 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                                             if use_gpu else torch.ones(same_pairs.shape[0], 1))) + \
                                             criterion_bce(classifier(different_pairs), \
                                             (torch.zeros(different_pairs.shape[0], 1).cuda() if use_gpu else \
-                                            torch.zeros(different_pairs.shape[0], 1)) / (NUM_VAL_CLASS_BATCH - 1))
+                                            torch.zeros(different_pairs.shape[0], 1))) / (NUM_VAL_CLASS_BATCH - 1)
                         
                     val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
