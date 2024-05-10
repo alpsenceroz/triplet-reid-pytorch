@@ -7,7 +7,8 @@ from tqdm import tqdm
 from torchvision import transforms
 import torch
 
-from autoencoders import VAE
+from backbones import ResNetEncoder, VGGEncoder, DenseNetEncoder, SwinEncoder
+from autoencoders import AE, VAE
 from classifier import Classifier
 
 BATCH_SIZE = 144
@@ -22,24 +23,70 @@ transform = transforms.Compose([
 if __name__ == "__main__":
     # args
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', type=str, default=3e-4, help='model weights directory')
-    parser.add_argument('--classifier_dir', type=str, default=None, help='classifier weights')
+    parser.add_argument('--backbone_dir', type=str, default=3e-4, help='backbone weights directory')
+    parser.add_argument('--backbone_type', type=str, default=None, help='backbone name')
+    parser.add_argument('--classifier_dir', type=str, default=None, help='Autoencoder weights')
+    parser.add_argument('--ae_dir', type=str, default=None, help='autoencoder weights')
+    parser.add_argument('--ae_type', type=str, default=None, help='autoencoder type')
     parser.add_argument('--dataset_dir', type=str, default=None, help='dataset directory')
     args = parser.parse_args()
 
     if args.dataset_dir is None:
         print('Please provide a dataset directory')
         exit()
-    dataset_dir = args.dataset_dir
-    model_dir = args.model_dir
-    classifier_dir = args.classifier_dir
+    if args.ae_dir is None or args.ae_type is None:
+        print('Please provide an autoencoder for evaluation')
+        exit()
+    if args.classifier_dir is None:
+        print('Please provide a classifier for evaluation')
+        exit()
+    if args.backbone_dir is None or args.backbone_type is None:
+        print('Please provide a backbone for evaluation')
+        exit()
 
-    # load model
-    model = VAE().cuda()
-    classifier = Classifier(input_size=512).cuda()
-    model.load_state_dict(torch.load(model_dir))
+    backbone_type = args.backbone_type
+    backbone_dir = args.backbone_dir
+    classifier_dir = args.classifier_dir
+    ae_dir = args.ae_dir
+    ae_type = args.ae_type
+    dataset_dir = args.dataset_dir
+
+    # load backbone
+    if backbone_type == 'resnet':
+        output_size = (256, 128)
+        backbone = ResNetEncoder()
+    elif backbone_type == 'vgg':
+        output_size = (256, 128)
+        backbone = VGGEncoder()
+    elif backbone_type == 'dense':
+        output_size = (256, 128)
+        backbone = DenseNetEncoder()
+    elif backbone_type == 'swin':
+        output_size = (224, 224)
+        backbone  = SwinEncoder()
+    else:
+        print('No valid backbone model specified')
+        exit(1)
+    backbone.load_state_dict(torch.load(backbone_dir))
+    backbone = backbone.cuda()
+
+    # load autoencoder
+    if ae_type == 'vae':
+        ae = VAE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
+    elif ae_type in ['ae', 'sae', 'dae']:
+        ae = AE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
+    else:
+        print('Invalid autoencoder type')
+        exit()
+    ae.load_state_dict(torch.load(ae_dir))
+    ae = ae.cuda()
+
+    # load classifier
+    classifier = Classifier(input_size=1456).cuda()
     classifier.load_state_dict(torch.load(classifier_dir))
-    model.eval()
+
+    ae.eval()
+    backbone.eval()
     classifier.eval()
 
     files = os.listdir(dataset_dir)
@@ -53,13 +100,10 @@ if __name__ == "__main__":
     print(f"Selected file: {random_file}")
     print(f"Selected ID: {anchor_id}")
 
-    img = Image.open(anchor_img_path)
-    img = transform(img)  # Apply the transformation
-    img = img.unsqueeze(0)  # Add an extra dimension for the batch size
-    img = img.cuda()
-
-    _, anchor_embedding, _, _= model(img)
-    anchor_embedding = anchor_embedding.repeat(BATCH_SIZE, 1)
+    anchor_img = Image.open(anchor_img_path)
+    anchor_img = transform(anchor_img)  # Apply the transformation
+    anchor_img = anchor_img.unsqueeze(0)  # Add an extra dimension for the batch size
+    anchor_img = anchor_img.cuda()
 
     best_k = []
     best_k_filenames = []
@@ -79,9 +123,25 @@ if __name__ == "__main__":
             continue
         print(f"Processing batch {idx // BATCH_SIZE}")
         images = torch.stack(images)
+        images = images.cuda()
 
         with torch.no_grad():
-            _, embeddings, _, _ = model(images)  # Get the embeddings
+            print(anchor_img.shape)
+            backbone_output = backbone(anchor_img)
+
+            if (ae_type == 'vae'):
+                    _, anchor_embedding, _, _= ae(backbone_output)
+            else:
+                _, anchor_embedding = ae(backbone_output)
+            anchor_embedding = anchor_embedding.repeat(BATCH_SIZE, 1)
+
+            out = backbone(images)
+
+            if (ae_type == 'vae'):
+                _, embeddings, _, _ = ae(out)
+            else:
+                _, embeddings = ae(out)
+            
             embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten the embeddings
             concatenated_embeddings = torch.cat((embeddings, anchor_embedding), dim=1)  # Concatenate the embeddings with the anchor embedding
             outputs = classifier(concatenated_embeddings)  # Get the outputs from the classifier
