@@ -316,6 +316,6 @@ if __name__ == '__main__':
           backbone_name=args.backbone_name, 
           ae_name=args.ae_name, 
           result_dir = args.result_dir,
-          pre_backbone = args.backbone,
+          pre_backbone = args.pre_backbone,
           pre_ae = args.pre_ae,
           pre_classifier = args.pre_classifier)
