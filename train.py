@@ -29,8 +29,8 @@ from classifier import Classifier
 RUN_HRS = 5
 max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 
-NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 250, 10
-NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 250, 10
+NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
+NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 5
 
 def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
           backbone_name="resnet", ae_name='ae'):

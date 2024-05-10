@@ -43,7 +43,7 @@ class VAE(nn.Module):
         x = self.encoder(x)
         if self.drop_p and self.training:
             x = F.dropout(x, p=self.drop_p, training=self.training)
-        mu, logvar = self.fc3_mu(x), self.fc3_logvar(x)
+        mu, logvar = self.fc_mu(x), self.fc_logvar(x)
         z = self.reparameterize(mu, logvar)
         x_reconst = self.decoder(z, out_size=(x.size(2), x.size(3)))
 
