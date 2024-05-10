@@ -14,6 +14,7 @@ from triplet_selector import BatchHardTripletSelector, PairSelector
 from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
 from logger import logger
+from pathlib import Path
 
 #from model import ReID
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss, SparsityLoss
@@ -31,15 +32,16 @@ NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
 NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
 
 def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.3,
-          backbone_name="resnet", ae_name='ae'):
+          backbone_name="resnet", ae_name='ae', result_dir='./'):
     ## setup
     start_time = time.time()
 
     torch.multiprocessing.set_sharing_strategy('file_system')
-    if not os.path.exists('./res'): 
-        os.makedirs('./res')
+    result_dir = Path(result_dir) / "res"
+    if not os.path.exists(result_dir): 
+        os.makedirs(result_dir)
 
-    save_folder_name = f"./res/backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})/"
+    save_folder_name = result_dir / f"backbone({backbone_name})_ae({ae_name})_lr({lr})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})"
     if not os.path.exists(save_folder_name): 
         os.makedirs(save_folder_name)
 
@@ -221,9 +223,9 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
                         
                     val_loss = val_loss / len(val_dataloader)
                     if val_loss < best_val_loss:
-                        torch.save(backbone.state_dict(), save_folder_name + 'best_backbone.pkl')
-                        torch.save(ae.state_dict(), save_folder_name + 'best_ae.pkl')
-                        torch.save(classifier.state_dict(), save_folder_name + 'best_classifier.pkl')
+                        torch.save(backbone.state_dict(), save_folder_name /'best_backbone.pkl')
+                        torch.save(ae.state_dict(), save_folder_name / 'best_ae.pkl')
+                        torch.save(classifier.state_dict(), save_folder_name / 'best_classifier.pkl')
                     
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, validation loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, val_loss, time_interval))
                 losses.append({
@@ -236,7 +238,7 @@ def train(lr=3e-4, lr_classifier=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, 
                     'val_loss': val_loss
                 })
                 df = pd.DataFrame(losses)
-                df.to_csv(save_folder_name + 'losses.csv', index=False)
+                df.to_csv(save_folder_name / 'losses.csv', index=False)
             else:
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_reconsruction, loss_bce, time_interval))
             
@@ -273,11 +275,12 @@ if __name__ == '__main__':
     parser.add_argument('--bce', type=float, default=0.3, help='bce loss')
     parser.add_argument('--sparsity', type=float, default=0, help='sparsity loss')
     
-    parser.add_argument('--backbone-name', type=str, default=0, help='backbone name')
+    parser.add_argument('--backbone-name', type=str, default='resnet', help='backbone name')
     
-    parser.add_argument('--ae-name', type=str, default=0, help='ae name')
+    parser.add_argument('--ae-name', type=str, default='ae', help='ae name')
+    parser.add_argument('--result-dir', type=str, default='./', help='ae name')
     
     
     args = parser.parse_args()
-    train(args.lr, args.lr_classifier, args.triplet, args.kl, args.reconstruction, args.bce,
-          backbone_name=args.backbone_name, ae_name=args.ae_name)
+    train(lr=args.lr, lr_classifier=args.lr_classifier,triplet= args.triplet, kl=args.kl, reconstruction=args.reconstruction, sparsity=args.sparsity, bce=args.bce,
+          backbone_name=args.backbone_name, ae_name=args.ae_name, result_dir = args.result_dir)
