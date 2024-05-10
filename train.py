@@ -194,6 +194,8 @@ def train(lr=3e-4, triplet=0.3, kl=0.3, reconstruction=0.3, bce=0.3, sparsity=0.
                         if use_gpu:
                             val_imgs = val_imgs.cuda()
                             val_lbs = val_lbs.cuda()
+                            
+                        backbone_output = backbone(val_imgs)
                         
                         if (ae_name == 'vae'):
                             x_reconst, x, mu, logvar= ae(backbone_output)

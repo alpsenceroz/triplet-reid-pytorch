@@ -56,11 +56,18 @@ class Market1501(Dataset):
                 transforms.TenCrop((256, 128)),
                 self.Lambda,
             ]) """
-            self.trans = transforms.Compose([
-                transforms.Resize((256, 128)),
+            if use_swin:
+                self.trans = transforms.Compose([
+                transforms.Resize((224, 112)),
                 transforms.ToTensor(),
-                transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
-            ])
+                transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225))])
+            else:
+                self.trans = transforms.Compose([
+                    transforms.Resize((256, 128)),
+                    transforms.Pad((56, 0, 56, 0), fill=0),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
+                ])
 
         # useful for sampler
         self.lb_img_dict = dict()
