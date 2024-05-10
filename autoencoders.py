@@ -41,13 +41,14 @@ class VAE(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
+        out_size = (x.size(2), x.size(3))
         if self.drop_p and self.training:
             x = F.dropout(x, p=self.drop_p, training=self.training)
         mu, logvar = self.fc_mu(x), self.fc_logvar(x)
-        z = self.reparameterize(mu, logvar)
-        x_reconst = self.decoder(z, out_size=(x.size(2), x.size(3)))
+        x = self.reparameterize(mu, logvar)
+        x_reconst = self.decoder(x, out_size=out_size)
 
-        return x_reconst, z, mu, logvar
+        return x_reconst, x, mu, logvar
 
 class AE(nn.Module):
     def __init__(self, input_size=2048, fc_hidden1=1024, fc_hidden2=768, drop_p=0.3, CNN_embed_dim=256):
