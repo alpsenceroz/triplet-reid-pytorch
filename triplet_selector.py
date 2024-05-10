@@ -33,7 +33,6 @@ class BatchHardTripletSelector(object):
         return embeds, pos, neg
 
 
-
 class PairSelector(object):
     '''
     a selector to generate hard batch embeddings from the embedded batch
