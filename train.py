@@ -24,11 +24,11 @@ import csv
 import pandas as pd
 
 
-RUN_HRS = 1.25
+RUN_HRS = 3
 max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 
-NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 32, 5
-NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 32, 2
+NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
+NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
 
 def train(lr=3e-4, 
           lr_classifier=3e-4, 
