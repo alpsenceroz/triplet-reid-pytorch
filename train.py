@@ -49,9 +49,6 @@ def train(lr=3e-4,
     if not os.path.exists(result_dir): 
         os.makedirs(result_dir)
 
-    save_folder_name = result_dir / f"backbone({backbone_name})_ae({ae_name})_lr({lr})_lr_classifier({lr_classifier})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})"
-    if not os.path.exists(save_folder_name): 
-        os.makedirs(save_folder_name)
 
     ## model and loss
     logger.info('setting up backbone model and loss')
@@ -76,9 +73,7 @@ def train(lr=3e-4,
     else:
         print('No valid backbone model specified')
         exit(1)
-        
-    if pre_backbone is not None:
-        backbone.load_state_dict(torch.load(pre_backbone))
+
         
     # initialize the AE
     if ae_name in ['ae', 'sae', 'dae']:
@@ -88,16 +83,29 @@ def train(lr=3e-4,
     else:
         print('No valid autoencoder model specified')
         exit(1)
-    
-    if pre_ae is not None:
-        ae.load_state_dict(torch.load(pre_ae))
-        
+
     # create dir with name of the backbone
     os.makedirs(f'./res/{backbone_name}_{ae_name}', exist_ok=True)
+
+    save_folder_name = result_dir / f"backbone({backbone_name})_ae({ae_name})_lr({lr})_lr_classifier({lr_classifier})_triplet({triplet})_kl({kl})_sparsity({sparsity})_recon({reconstruction})_bce({bce})"
+    if not os.path.exists(save_folder_name): 
+        os.makedirs(save_folder_name)
+    
+    if pre_backbone is not None:
+        backbone.load_state_dict(torch.load(pre_backbone))
+    elif os.path.exists(save_folder_name / 'best_backbone.pkl'):
+         backbone.load_state_dict(torch.load(save_folder_name / 'best_backbone.pkl'))
+        
+    if pre_ae is not None:
+        ae.load_state_dict(torch.load(pre_ae))
+    elif os.path.exists(save_folder_name / 'best_ae.pkl'):
+        ae.load_state_dict(torch.load(save_folder_name / 'best_ae.pkl'))
         
     classifier = Classifier(input_size=1456)
     if pre_classifier is not None:
         classifier.load_state_dict(torch.load(pre_classifier))
+    elif os.path.exists(save_folder_name / 'best_classifier.pkl'):
+        classifier.load_state_dict(torch.load(save_folder_name / 'best_classifier.pkl'))
 
     
     criterion_triplet = TripletLoss(margin = 0.2) # no margin means soft-margin
