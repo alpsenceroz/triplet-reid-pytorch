@@ -16,7 +16,6 @@ from datasets.Market1501 import Market1501
 from logger import logger
 from pathlib import Path
 
-#from model import ReID
 from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss, SparsityLoss
 from autoencoders import VAE, AE
 from classifier import Classifier
@@ -25,11 +24,11 @@ import csv
 import pandas as pd
 
 
-RUN_HRS = 5
+RUN_HRS = 1.25
 max_runtime = RUN_HRS * 3600 # run 5 hours to prevent drain of colab credits
 
-NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 16, 5
-NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 16, 2
+NUM_TRAIN_CLASS_BATCH, NUM_TRAIN_INSTANCES_BATCH = 32, 5
+NUM_VAL_CLASS_BATCH, NUM_VAL_INSTANCES_BATCH = 32, 2
 
 def train(lr=3e-4, 
           lr_classifier=3e-4, 
@@ -258,6 +257,9 @@ def train(lr=3e-4,
                 })
                 df = pd.DataFrame(losses)
                 df.to_csv(save_folder_name / 'losses.csv', index=False)
+                loss_file = open(save_folder_name / 'losses.txt', 'a')
+                loss_file.write(f'Iteration: {count}, Training Loss: {training_loss_avg}, Triplet Loss: {loss_triplet.item()}, KL Divergence: {loss_kl_divergence if ae_name == "vae" else "N/A"}, Sparsity Loss: {loss_sparsity if ae_name == "sae" else "N/A"}, Reconstruction Loss: {loss_reconsruction.item()}, BCE Loss: {loss_bce.item()}, Validation Loss: {val_loss}\n')
+                loss_file.close()
             else:
                 logger.info('iter: {}, loss: {:4f}, triplet loss: {:4f}, kl divergence loss: {:4f}, sparsity loss: {:4f}, reconstruction loss: {:4f}, BCE loss: {:4f}, time: {:3f}'.format(count, training_loss_avg, loss_triplet, loss_kl_divergence, loss_sparsity, loss_reconsruction, loss_bce, time_interval))
             
