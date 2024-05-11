@@ -44,10 +44,10 @@ class PairSelector(object):
         labels = labels.contiguous().cpu().numpy().reshape((-1, 1)) # labels: 2D ndarray of shape (n, 1); n = # of embeddings
         lb_eqs = labels == labels.T # lb_eqs: 2D ndarray of shape (n, n); n = # of embeddings
 
-        # pair_number = int(n_num * (n_num - 1) / 2)
         same_pairs = []
         diff_pairs = []
-        pair_indices = []  # New list to store (i ,j); given pairs[k] = embeds[i] + embeds[j]
+        same_pair_indices = []  # New list to store (i ,j); given same_pairs[k] = embeds[i] + embeds[j]
+        diff_pair_indices = []  # New list to store (i, j); given diff_pairs[k] = embeds[i] + embeds[j]
 
         for ind, embed in enumerate(embeds):
             ind_true = np.where(lb_eqs[ind])[0]  # ind_true: 1D ndarray, indices of embeddings with the same label as embed
@@ -55,13 +55,14 @@ class PairSelector(object):
             for i in range(len(ind_true)):
                 pair = torch.cat((embed, embeds[ind_true[i]])) # Concatenate the embeddings
                 same_pairs.append(pair)
-                pair_indices.append((ind, ind_true[i]))  # Store the indices
+                same_pair_indices.append((ind, ind_true[i]))  # Store the indices
             for i in range(len(ind_false)):
                 pair = torch.cat((embed, embeds[ind_false[i]]))
                 diff_pairs.append(pair)
-                pair_indices.append((ind, ind_false[i]))  # Store the indices
+                diff_pair_indices.append((ind, ind_false[i]))  # Store the indices
         same_pairs = torch.stack(same_pairs)
         diff_pairs = torch.stack(diff_pairs)
+        pair_indices = same_pair_indices + diff_pair_indices
 
         return same_pairs, diff_pairs, pair_indices
 

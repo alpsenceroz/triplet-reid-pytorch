@@ -1,35 +1,24 @@
 import torch
-import torch.nn as nn
-import torchvision
 from torch.utils.data import DataLoader
 
 from sklearn.metrics import confusion_matrix
 import numpy as np
 
-
-import sys
-import os
-import logging
-import time
-import itertools
 import argparse
 
-from backbones import EmbedNetwork
-from triplet_selector import BatchHardTripletSelector, PairSelector
+from triplet_selector import PairSelector
 from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
-from optimizer import AdamOptimWrapper
 from logger import logger
 import matplotlib.pyplot as plt
 
-from losses import KLDivergence, ReconstructionLoss, BinaryCrossEntropy, TripletLoss
-from autoencoders import VAE
-from classifier import Classifier
+import utils
 
 def visualize_results(preds, pair_labels, indices, imgs):
     K = 5
 
-    # Get the indices of the pairs where the pair labels are 1
+    # Get the indices of the pairs where the pair labels are 0
+    print("pair_labels.size", pair_labels.shape)
     equal_pairs_indices = [i for i, label in enumerate(pair_labels) if label == 0.]
 
     selected_pairs_indices = equal_pairs_indices[:K]
@@ -103,24 +92,37 @@ def map_at_k(lbs, labels_sorted, k):
 
 def eval(args):
 
-    if args.model_dir is None or args.classifier_dir is None:
-        raise ValueError('model_dir and classifier_dir are required')
-    else:
-        classifier_dir = args.classifier_dir
-        model_dir = args.model_dir
+    if args.dataset_dir is None:
+        print('Please provide a dataset directory')
+        exit()
+    if args.ae_dir is None or args.ae_type is None:
+        print('Please provide an autoencoder for evaluation')
+        exit()
+    if args.classifier_dir is None:
+        print('Please provide a classifier for evaluation')
+        exit()
+    if args.backbone_dir is None or args.backbone_type is None:
+        print('Please provide a backbone for evaluation')
+        exit()
 
-    model = VAE().cuda()
-    classifier = Classifier(input_size=512).cuda()
+    backbone_type = args.backbone_type
+    backbone_dir = args.backbone_dir
+    classifier_dir = args.classifier_dir
+    ae_dir = args.ae_dir
+    ae_type = args.ae_type
+    dataset_dir = args.dataset_dir
 
-    model.load_state_dict(torch.load(model_dir))
-    classifier.load_state_dict(torch.load(classifier_dir))
+    backbone, ae, classifier = utils.load_model(backbone_type, backbone_dir, classifier_dir, ae_dir, ae_type)
+
+    backbone.eval()
+    ae.eval()
+    classifier.eval()
     
     pair_selector = PairSelector()
-    ds = Market1501('datasets/Market-1501-v15.09.15/bounding_box_test', is_train = True)
+    ds = Market1501(dataset_dir, is_train = True)
     sampler = BatchSampler(ds, 18, 4)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
-    model.eval()
-    classifier.eval()
+    
     diter = iter(dl)
     with torch.inference_mode():
         try:
@@ -132,20 +134,39 @@ def eval(args):
         imgs = imgs.cuda() # images
         lbs = lbs.cuda() # corresponding id labels
 
-        x_reconst, z, mu, logvar= model(imgs)
-        pairs, pair_labels, indices = pair_selector(z, lbs, 18, 4)
+        backbone_output = backbone(imgs)
 
+        if (ae_type == 'vae'):
+                _, embeds, _, _= ae(backbone_output)
+        else:
+            _, embeds = ae(backbone_output)
+
+        same_pairs, diff_pairs, pair_indices = pair_selector(embeds, lbs, 18, 4)
+        size = same_pairs.shape[0]
+
+        same_pair_indices = pair_indices[:size]
+        diff_pair_indices = pair_indices[size:]
+
+        diff_pairs = diff_pairs[:size]
+        diff_pair_indices = diff_pair_indices[:size]
+
+        pair_indices = same_pair_indices + diff_pair_indices
+
+        pairs = torch.cat((same_pairs, diff_pairs), dim=0)
+        pair_labels = torch.cat((torch.ones(size), torch.zeros(size)), dim=0)
         preds = classifier(pairs)
-        preds = np.round(preds.cpu().detach().numpy())
+        preds = preds.cpu().detach().numpy()
+        preds = np.where(preds > 0.7, 1, 0) # thresholding with 0.7
 
-        visualize_results(preds, pair_labels, indices, imgs)
-        
+        visualize_results(preds, pair_labels, pair_indices, imgs)
+
+
         # create rankings for each query
         g_primes = []
         labels_list = []
-        for embed in z:
+        for embed in embeds:
             # sort wrt distance
-            g_prime, labels = calculate_g_prime(embed, z, lbs)
+            g_prime, labels = calculate_g_prime(embed, embeds, lbs)
             g_primes.append([g_prime, labels])
             labels_list.append(labels)
 
@@ -189,8 +210,12 @@ def eval(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', type=str, default=3e-4, help='model weights directory')
-    parser.add_argument('--classifier_dir', type=str, default=None, help='classifier weights')
+    parser.add_argument('--backbone_dir', type=str, default=3e-4, help='backbone weights directory')
+    parser.add_argument('--backbone_type', type=str, default=None, help='backbone name')
+    parser.add_argument('--classifier_dir', type=str, default=None, help='Autoencoder weights')
+    parser.add_argument('--ae_dir', type=str, default=None, help='autoencoder weights')
+    parser.add_argument('--ae_type', type=str, default=None, help='autoencoder type')
+    parser.add_argument('--dataset_dir', type=str, default=None, help='dataset directory')
 
     args = parser.parse_args()
     eval(args)

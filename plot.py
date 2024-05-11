@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Replace 'your_file_path.csv' with the path to your CSV file
-file_path = '/home/bilginer/Downloads/losses (11).csv'
+file_path = '/home/bilginer/Downloads/losses (12).csv'
 
 # Load the CSV file
 data = pd.read_csv(file_path)

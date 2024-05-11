@@ -7,18 +7,10 @@ from tqdm import tqdm
 from torchvision import transforms
 import torch
 
-from backbones import ResNetEncoder, VGGEncoder, DenseNetEncoder, SwinEncoder
-from autoencoders import AE, VAE
-from classifier import Classifier
+import utils
 
 BATCH_SIZE = 144
 K = 6
-
-transform = transforms.Compose([
-    transforms.Resize((288, 144)),  # Resize the images
-    transforms.ToTensor(),  # Convert the images to tensors
-    transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),  # Normalize the images
-])
 
 if __name__ == "__main__":
     # args
@@ -51,39 +43,22 @@ if __name__ == "__main__":
     ae_type = args.ae_type
     dataset_dir = args.dataset_dir
 
-    # load backbone
-    if backbone_type == 'resnet':
-        output_size = (256, 128)
-        backbone = ResNetEncoder()
-    elif backbone_type == 'vgg':
-        output_size = (256, 128)
-        backbone = VGGEncoder()
-    elif backbone_type == 'dense':
-        output_size = (256, 128)
-        backbone = DenseNetEncoder()
-    elif backbone_type == 'swin':
-        output_size = (224, 224)
-        backbone  = SwinEncoder()
+    if backbone_type == 'swin':
+        transform = transforms.Compose([
+            transforms.Resize((224, 112)),
+            transforms.Pad((56, 0, 56, 0), fill=0),
+            transforms.ToTensor(),
+            transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
+        ])
     else:
-        print('No valid backbone model specified')
-        exit(1)
-    backbone.load_state_dict(torch.load(backbone_dir))
-    backbone = backbone.cuda()
+        transform = transforms.Compose([
+            transforms.Resize((256, 128)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
+        ])
 
-    # load autoencoder
-    if ae_type == 'vae':
-        ae = VAE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
-    elif ae_type in ['ae', 'sae', 'dae']:
-        ae = AE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
-    else:
-        print('Invalid autoencoder type')
-        exit()
-    ae.load_state_dict(torch.load(ae_dir))
-    ae = ae.cuda()
-
-    # load classifier
-    classifier = Classifier(input_size=1456).cuda()
-    classifier.load_state_dict(torch.load(classifier_dir))
+    backbone, ae, classifier = utils.load_model(backbone_type, backbone_dir, classifier_dir, ae_dir, ae_type)
 
     ae.eval()
     backbone.eval()
@@ -126,13 +101,13 @@ if __name__ == "__main__":
         images = images.cuda()
 
         with torch.no_grad():
-            print(anchor_img.shape)
             backbone_output = backbone(anchor_img)
 
             if (ae_type == 'vae'):
                     _, anchor_embedding, _, _= ae(backbone_output)
             else:
                 _, anchor_embedding = ae(backbone_output)
+            
             anchor_embedding = anchor_embedding.repeat(BATCH_SIZE, 1)
 
             out = backbone(images)
@@ -145,6 +120,7 @@ if __name__ == "__main__":
             embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten the embeddings
             concatenated_embeddings = torch.cat((embeddings, anchor_embedding), dim=1)  # Concatenate the embeddings with the anchor embedding
             outputs = classifier(concatenated_embeddings)  # Get the outputs from the classifier
+            # outputs = torch.nn.functional.cosine_similarity(embeddings, anchor_embedding, dim=1)  # Get the cosine similarity between the embeddings
             outputs = outputs.view(-1)  # Flatten the outputs
 
             # Get the k largest outputs and their indices

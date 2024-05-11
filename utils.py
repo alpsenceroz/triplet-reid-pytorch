@@ -4,6 +4,46 @@
 import torch
 import numpy as np
 from PIL import Image
+from autoencoders import AE, VAE
+from backbones import ResNetEncoder, VGGEncoder, DenseNetEncoder, SwinEncoder
+from classifier import Classifier
+
+def load_model(backbone_type, backbone_dir, classifier_dir, ae_dir, ae_type):
+    # load backbone
+    if backbone_type == 'resnet':
+        output_size = (256, 128)
+        backbone = ResNetEncoder()
+    elif backbone_type == 'vgg':
+        output_size = (256, 128)
+        backbone = VGGEncoder()
+    elif backbone_type == 'dense':
+        output_size = (256, 128)
+        backbone = DenseNetEncoder()
+    elif backbone_type == 'swin':
+        output_size = (224, 224)
+        backbone  = SwinEncoder()
+    else:
+        print('No valid backbone model specified')
+        exit(1)
+    backbone.load_state_dict(torch.load(backbone_dir))
+    backbone = backbone.cuda()
+
+    # load autoencoder
+    if ae_type == 'vae':
+        ae = VAE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
+    elif ae_type in ['ae', 'sae', 'dae']:
+        ae = AE(input_size=backbone.output_size, orig_height=output_size[0], orig_width=output_size[1]).cuda()
+    else:
+        print('Invalid autoencoder type')
+        exit()
+    ae.load_state_dict(torch.load(ae_dir))
+    ae = ae.cuda()
+
+    # load classifier
+    classifier = Classifier(input_size=1456).cuda()
+    classifier.load_state_dict(torch.load(classifier_dir))
+
+    return backbone, ae, classifier
 
 
 def pdist_torch(emb1, emb2):
