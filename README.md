@@ -13,7 +13,7 @@ Multi-Objective Optimization: A strategic architecture to simultaneously minimiz
 The project utilizes the Market-1501 dataset, a benchmark for ReID tasks, to train and test the model. Performance metrics such as Mean Average Precision (mAP) and Cumulative Matching Characteristics (CMC) were used to evaluate the model. The results indicate that various pairings of autoencoders and selected backbones yield different levels of performance, with the Swin Transformer and Variational Autoencoder emerging as the most effective combination.
 
 
-
+Colab link: https://colab.research.google.com/drive/1AUSFVXXftX_OecHDFuIzthRCOhQEAhDj?usp=sharing
 ### prepare dataset
 prepare.py
 
