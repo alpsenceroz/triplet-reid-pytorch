@@ -1,4 +1,6 @@
 # Deep Person Reid
+
+![Top-k](./topkfinal.png)
 The primary objective is to design and implement a machine learning model that integrates the Siamese network with autoencoders, utilizing several backbone architectures including ResNet-152, DenseNet, VGG, and Swin Transformer for robust feature extraction. This combination aims to improve the model's ability to handle variations in lighting, pose, and occlusion that typically challenge surveillance systems.
 
 Key topics and methodologies employed include:
@@ -56,3 +58,7 @@ topk.py:
   --ae_type: Name of the autoencoder used
   --dataset_dir: Directory path to dataset
 ```
+
+
+![same](./same.png)
+![different](./diff.png)
