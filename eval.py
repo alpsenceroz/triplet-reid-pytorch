@@ -11,6 +11,7 @@ from batch_sampler import BatchSampler
 from datasets.Market1501 import Market1501
 from logger import logger
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 import utils
 
@@ -91,12 +92,12 @@ def map_at_k(lbs, labels_sorted, k):
     return total_ap / len(lbs)
 
 def cmc_curve(labels, labels_sorted):
-    num_queries = len(labels)
+    num_queries =  min(len(labels_sorted[0]), 20)
     num_matches = torch.zeros(num_queries)
     ranks = []
 
     for i in range(num_queries):
-        for j in range(1, len(labels_sorted[i])):
+        for j in range(1, min(len(labels_sorted[i]), 20)):
             if labels_sorted[i][j] == labels[i]:
                 num_matches[j] += 1
                 ranks.append(j + 1)
@@ -107,28 +108,38 @@ def cmc_curve(labels, labels_sorted):
     return cmc, ranks
 
 def eval(args):
-
     if args.dataset_dir is None:
         print('Please provide a dataset directory')
         exit()
-    if args.ae_dir is None or args.ae_type is None:
-        print('Please provide an autoencoder for evaluation')
-        exit()
-    if args.classifier_dir is None:
-        print('Please provide a classifier for evaluation')
-        exit()
-    if args.backbone_dir is None or args.backbone_type is None:
-        print('Please provide a backbone for evaluation')
-        exit()
+    if args.all_dir is None:
+
+        if args.ae_dir is None or args.ae_type is None:
+            print('Please provide an autoencoder for evaluation')
+            exit()
+        if args.classifier_dir is None:
+            print('Please provide a classifier for evaluation')
+            exit()
+        if args.backbone_dir is None or args.backbone_type is None:
+            print('Please provide a backbone for evaluation')
+            exit()
+        
+        ae_dir = args.ae_dir
+        backbone_dir = args.backbone_dir
+        classifier_dir = args.classifier_dir
+
+    else:
+        all_dir = Path(args.all_dir)
+        ae_dir = all_dir / "best_ae.pkl"
+        backbone_dir = all_dir / "best_backbone.pkl"
+        classifier_dir = all_dir / "best_classifier.pkl"
 
     backbone_type = args.backbone_type
-    backbone_dir = args.backbone_dir
-    classifier_dir = args.classifier_dir
-    ae_dir = args.ae_dir
     ae_type = args.ae_type
     dataset_dir = args.dataset_dir
-
+    
     backbone, ae, classifier = utils.load_model(backbone_type, backbone_dir, classifier_dir, ae_dir, ae_type)
+
+
 
     backbone.eval()
     ae.eval()
@@ -136,7 +147,7 @@ def eval(args):
     
     pair_selector = PairSelector()
     ds = Market1501(dataset_dir, is_train = True, use_swin = (backbone_type == "swin"))
-    sampler = BatchSampler(ds, 72, 5)
+    sampler = BatchSampler(ds, 18, 5)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
     
     diter = iter(dl)
@@ -157,7 +168,7 @@ def eval(args):
         else:
             _, embeds = ae(backbone_output)
 
-        same_pairs, diff_pairs, pair_indices = pair_selector(embeds, lbs, 72, 5)
+        same_pairs, diff_pairs, pair_indices = pair_selector(embeds, lbs, 18, 5)
         size = same_pairs.shape[0]
 
         same_pair_indices = pair_indices[:size]
@@ -187,8 +198,12 @@ def eval(args):
             labels_list.append(labels)
 
         k = 5
-                
-        # calculate mAP@4
+            
+        # calculate Rank@1
+        rank1 = map_at_k(lbs, labels_list, k)
+        print(f"Rank@5:{rank1}")
+
+        # calculate mAP@5
         map5 = map_at_k(lbs, labels_list, k) 
         print(f"mAP@5:{map5}")
         
@@ -240,6 +255,8 @@ def eval(args):
             f.write(f"Recall: {recall}\n")
             f.write(f"F1 Score: {f1_score}\n")
             f.write(f"F2 Score: {f2_score}\n")
+            f.write(f"Rank1: {rank1}\n")
+            f.write(f"mAP5: {map5}\n")
 
         #Precision Recall Curve
         precision, recall, _ = precision_recall_curve(pair_labels.cpu().numpy(), preds)
@@ -286,6 +303,7 @@ if __name__ == '__main__':
     parser.add_argument('--ae_dir', type=str, default=None, help='autoencoder weights')
     parser.add_argument('--ae_type', type=str, default=None, help='autoencoder type')
     parser.add_argument('--dataset_dir', type=str, default=None, help='dataset directory')
+    parser.add_argument('--all-dir', type=str, default=None, help='dataset directory')
 
     args = parser.parse_args()
     eval(args)
