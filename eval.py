@@ -200,7 +200,7 @@ def eval(args):
         k = 5
             
         # calculate Rank@1
-        rank1 = map_at_k(lbs, labels_list, k)
+        rank1 = map_at_k(lbs, labels_list, 1)
         print(f"Rank@5:{rank1}")
 
         # calculate mAP@5
