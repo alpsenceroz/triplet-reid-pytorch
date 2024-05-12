@@ -15,7 +15,7 @@ K = 6
 if __name__ == "__main__":
     # args
     parser = argparse.ArgumentParser()
-    parser.add_argument('--backbone_dir', type=str, default=3e-4, help='backbone weights directory')
+    parser.add_argument('--backbone_dir', type=str, default=None, help='backbone weights directory')
     parser.add_argument('--backbone_type', type=str, default=None, help='backbone name')
     parser.add_argument('--classifier_dir', type=str, default=None, help='Autoencoder weights')
     parser.add_argument('--ae_dir', type=str, default=None, help='autoencoder weights')
@@ -96,6 +96,7 @@ if __name__ == "__main__":
 
         if len(images) < BATCH_SIZE:
             continue
+        
         print(f"Processing batch {idx // BATCH_SIZE}")
         images = torch.stack(images)
         images = images.cuda()

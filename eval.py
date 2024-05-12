@@ -133,7 +133,7 @@ def eval(args):
             
         imgs = imgs.cuda() # images
         lbs = lbs.cuda() # corresponding id labels
-
+    
         backbone_output = backbone(imgs)
 
         if (ae_type == 'vae'):
@@ -210,7 +210,7 @@ def eval(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--backbone_dir', type=str, default=3e-4, help='backbone weights directory')
+    parser.add_argument('--backbone_dir', type=str, default=None, help='backbone weights directory')
     parser.add_argument('--backbone_type', type=str, default=None, help='backbone name')
     parser.add_argument('--classifier_dir', type=str, default=None, help='Autoencoder weights')
     parser.add_argument('--ae_dir', type=str, default=None, help='autoencoder weights')

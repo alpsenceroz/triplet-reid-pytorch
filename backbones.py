@@ -7,8 +7,7 @@ import timm
 class ResNetEncoder(nn.Module):
     def __init__(self):
         super(ResNetEncoder, self).__init__()
-
-
+        
         # encoding components
         resnet = models.resnet152(pretrained=True)
         modules = list(resnet.children())[:-1]  # delete the last fc layer.
