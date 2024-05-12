@@ -232,6 +232,14 @@ def eval(args):
         beta = 2
         f2_score = (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall) if  ((beta**2 * precision) + recall) != 0 else 0.
         print(f"F2 Score: {f2_score}")
+        
+        with open('metrics.txt', 'w') as f:
+            # Write each metric to the file
+            f.write(f"Accuracy: {accuracy}\n")
+            f.write(f"Precision: {precision}\n")
+            f.write(f"Recall: {recall}\n")
+            f.write(f"F1 Score: {f1_score}\n")
+            f.write(f"F2 Score: {f2_score}\n")
 
         #Precision Recall Curve
         precision, recall, _ = precision_recall_curve(pair_labels.cpu().numpy(), preds)
