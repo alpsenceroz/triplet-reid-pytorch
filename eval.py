@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import precision_recall_curve, auc, roc_curve
 from sklearn.metrics import confusion_matrix
 import numpy as np
-
+import seaborn as sns
 import argparse
 
 from triplet_selector import PairSelector
@@ -200,6 +200,12 @@ def eval(args):
         FN, TP = cm[1]
         
         print(f"TP: {TP}, FP: {FP}, FN: {FN}, TN: {TN}")
+        plt.figure(figsize=(10,7))
+        sns.heatmap(cm, annot=True, fmt='d')
+        plt.xlabel('Predicted')
+        plt.ylabel('Truth')
+        plt.savefig("Confusion.png")
+        plt.show()
         
         # Calculate and print accuracy
         accuracy = (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) != 0 else 0.
