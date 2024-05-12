@@ -200,10 +200,15 @@ def eval(args):
         FN, TP = cm[1]
         
         print(f"TP: {TP}, FP: {FP}, FN: {FN}, TN: {TN}")
+        
+        labels = np.array([['TP: ' + str(TP), 'FP: ' + str(FP)], ['FN: ' + str(FN), 'TN: ' + str(TN)]])
+
         plt.figure(figsize=(10,7))
-        sns.heatmap(cm, annot=True, fmt='d')
-        plt.xlabel('Predicted')
-        plt.ylabel('Truth')
+        sns.heatmap([[TP, FP],[FN, TN]], annot=labels, fmt='', cmap='Blues')
+        plt.xlabel('Actual')
+        plt.ylabel('Predicted')
+        plt.xticks([0.5, 1.5], ['1', '0'])
+        plt.yticks([0.5, 1.5], ['1', '0'], rotation=0)
         plt.savefig("Confusion.png")
         plt.show()
         
