@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-
+from sklearn.metrics import precision_recall_curve, auc, roc_curve
 from sklearn.metrics import confusion_matrix
 import numpy as np
 
@@ -19,11 +19,11 @@ def visualize_results(preds, pair_labels, indices, imgs):
 
     # Get the indices of the pairs where the pair labels are 0
     print("pair_labels.size", pair_labels.shape)
-    equal_pairs_indices = [i for i, label in enumerate(pair_labels) if label == 0.]
+    equal_pairs_indices = [i for i, label in enumerate(pair_labels) if label == 1.]
 
     selected_pairs_indices = equal_pairs_indices[:K]
 
-    # Create a new figure
+    # Create a new figur
     _, axs = plt.subplots(K, 3, figsize=(10, K*5))
 
     mean = np.array([0.485, 0.456, 0.406])
@@ -56,6 +56,7 @@ def visualize_results(preds, pair_labels, indices, imgs):
 
     # Display the figure
     plt.tight_layout()
+    plt.savefig("results.png")
     plt.show()
 
 
@@ -89,6 +90,21 @@ def map_at_k(lbs, labels_sorted, k):
         total_ap += average_precision_at_k(label, labels, k)
     return total_ap / len(lbs)
 
+def cmc_curve(labels, labels_sorted):
+    num_queries = len(labels)
+    num_matches = torch.zeros(num_queries)
+    ranks = []
+
+    for i in range(num_queries):
+        for j in range(1, len(labels_sorted[i])):
+            if labels_sorted[i][j] == labels[i]:
+                num_matches[j] += 1
+                ranks.append(j + 1)
+                break
+
+    cmc = num_matches.cumsum(0) / num_queries
+    print(num_matches)
+    return cmc, ranks
 
 def eval(args):
 
@@ -119,8 +135,8 @@ def eval(args):
     classifier.eval()
     
     pair_selector = PairSelector()
-    ds = Market1501(dataset_dir, is_train = True)
-    sampler = BatchSampler(ds, 18, 4)
+    ds = Market1501(dataset_dir, is_train = True, use_swin = (backbone_type == "swin"))
+    sampler = BatchSampler(ds, 72, 5)
     dl = DataLoader(ds, batch_sampler = sampler, num_workers = 4)
     
     diter = iter(dl)
@@ -141,7 +157,7 @@ def eval(args):
         else:
             _, embeds = ae(backbone_output)
 
-        same_pairs, diff_pairs, pair_indices = pair_selector(embeds, lbs, 18, 4)
+        same_pairs, diff_pairs, pair_indices = pair_selector(embeds, lbs, 72, 5)
         size = same_pairs.shape[0]
 
         same_pair_indices = pair_indices[:size]
@@ -156,9 +172,9 @@ def eval(args):
         pair_labels = torch.cat((torch.ones(size), torch.zeros(size)), dim=0)
         preds = classifier(pairs)
         preds = preds.cpu().detach().numpy()
-        preds = np.where(preds > 0.7, 1, 0) # thresholding with 0.7
+        preds_thresholded = np.where(preds > 0.7, 1, 0) # thresholding with 0.7
 
-        visualize_results(preds, pair_labels, pair_indices, imgs)
+        visualize_results(preds_thresholded, pair_labels, pair_indices, imgs)
 
 
         # create rankings for each query
@@ -206,7 +222,42 @@ def eval(args):
         f2_score = (1 + beta**2) * (precision * recall) / ((beta**2 * precision) + recall) if  ((beta**2 * precision) + recall) != 0 else 0.
         print(f"F2 Score: {f2_score}")
 
-        
+        #Precision Recall Curve
+        precision, recall, _ = precision_recall_curve(pair_labels.cpu().numpy(), preds)
+        auc_pr = auc(recall, precision)
+        plt.plot(recall, precision, label=f'PR curve (AUC = {auc_pr:.2f})')
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.title('Precision-Recall Curve')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig("Precision-Recall.png")
+        plt.show()
+
+        #CMC Curve 
+        cmc, ranks = cmc_curve(lbs.cpu().numpy(), labels_list)
+        plt.figure()
+        plt.plot(np.arange(1, len(cmc) + 1), cmc)
+        plt.xlabel('Rank')
+        plt.ylabel('Matching Probability')
+        plt.title('Cumulative Matching Characteristics (CMC) Curve')
+        plt.grid(True)
+        plt.savefig("CMC.png")
+        plt.show()
+
+        # ROC Curve
+        fpr, tpr, thresholds = roc_curve(pair_labels.cpu().numpy(), preds)
+        auc_pr = auc(fpr, tpr)
+        plt.figure()
+        plt.plot(fpr, tpr, label=f'ROC curve (AUC = {auc_pr:.2f})')
+        plt.xlabel('FP')
+        plt.ylabel('TP')
+        plt.title('ROC Curve')
+        plt.grid(True)
+        plt.legend()
+        plt.savefig("ROC.png")
+        plt.show()
+
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
