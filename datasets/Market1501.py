@@ -37,25 +37,11 @@ class Market1501(Dataset):
             else:
                 self.trans = transforms.Compose([
                     transforms.Resize((256, 128)),
-                    #transforms.Resize((288, 144)),
-                    #transforms.RandomCrop((256, 128)),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225)),
-                    #RandomErasing(0.5, mean=[0.0, 0.0, 0.0])
                 ])
         else:
-            """ self.trans_tuple = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.486, 0.459, 0.408), (0.229, 0.224, 0.225))
-                ])
-            self.Lambda = transforms.Lambda(
-                lambda crops: [self.trans_tuple(crop) for crop in crops])
-            self.trans = transforms.Compose([
-                transforms.Resize((288, 144)),
-                transforms.TenCrop((256, 128)),
-                self.Lambda,
-            ]) """
             if use_swin:
                 self.trans = transforms.Compose([
                 transforms.Resize((224, 112)),
