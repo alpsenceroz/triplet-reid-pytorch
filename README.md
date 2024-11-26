@@ -1,5 +1,7 @@
 # Deep Person Reid
 
+[Presentation](https://docs.google.com/presentation/d/1NI6a9t7CBddQv0fWaQhCtOXeYCTyhn3YYy7prThRQ1g/edit?usp=sharing)
+
 ![Top-k](./topkfinal.png)
 The primary objective is to design and implement a machine learning model that integrates the Siamese network with autoencoders, utilizing several backbone architectures including ResNet-152, DenseNet, VGG, and Swin Transformer for robust feature extraction. This combination aims to improve the model's ability to handle variations in lighting, pose, and occlusion that typically challenge surveillance systems.
 
